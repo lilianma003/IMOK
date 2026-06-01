@@ -1,20 +1,22 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 export default function App() {
+  const [message, setMessage] = useState('Tap the button');
+
   return (
     <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
+      <Text style={styles.text}>{message}</Text>
+      <TouchableOpacity style={styles.button} onPress={() => setMessage('It works!')}>
+        <Text style={styles.buttonText}>Tap me</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  text: { fontSize: 20, marginBottom: 20 },
+  button: { backgroundColor: '#e63946', padding: 16, borderRadius: 8 },
+  buttonText: { color: 'white', fontSize: 16 }
 });
