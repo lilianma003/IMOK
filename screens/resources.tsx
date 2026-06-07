@@ -28,7 +28,7 @@ const sections: Section[] = [
     content: [
       'Do not open the door. You can speak through the door and ask them to show their warrant.',
       'Ask if they have a judicial warrant signed by a judge. An ICE administrative warrant does NOT give them the right to enter your home.',
-      'If they do not have a judicial warrant, calmly say: "I do not consent to your entry."',
+      'If they do not have a judicial warrant, wcalmly say: "I do not consent to your entry."',
       'Do not lie or provide false documents.',
       'If they force their way in, do not resist. Clearly state: "I do not consent to this search."',
       'Stay calm and memorize or write down the officers\' names and badge numbers.',

@@ -29,7 +29,7 @@ export default function App() {
 
             return <Ionicons name={iconName as any} size={size} color={color} />;
           },
-          tabBarActiveTintColor: '#6200ee', // color when tab is selected
+          tabBarActiveTintColor: '#1565c0', // color when tab is selected
           tabBarInactiveTintColor: 'gray',
         })}
       >
