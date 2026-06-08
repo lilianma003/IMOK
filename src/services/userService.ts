@@ -1,0 +1,35 @@
+import { db } from '../config/firebaseConfig';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+
+interface UserData {
+  name: string;
+  phoneNumber: string;
+  profilePicture: string;
+  createdAt: Date;
+}
+
+export const createUserDocument = async (
+  userId: string,
+  userData: Pick<UserData, 'name' | 'phoneNumber'>
+): Promise<void> => {
+  await setDoc(doc(db, 'users', userId), {
+    name: userData.name,
+    phoneNumber: userData.phoneNumber,
+    profilePicture: '',
+    createdAt: new Date(),
+  });
+};
+
+export const getUserDocument = async (
+  userId: string
+): Promise<UserData | undefined> => {
+  const snap = await getDoc(doc(db, 'users', userId));
+  return snap.data() as UserData | undefined;
+};
+
+export const updateUserDocument = async (
+  userId: string,
+  data: Partial<UserData>
+): Promise<void> => {
+  await updateDoc(doc(db, 'users', userId), data);
+};
