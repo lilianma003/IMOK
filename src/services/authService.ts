@@ -1,20 +1,24 @@
-import auth from '@react-native-firebase/auth';
+// import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+// import { app } from '../firebaseConfig'; // adjust path if needed
 
-export const sendPhoneOTP = async (
-  phoneNumber: string
-): Promise<any> => {
-  const confirmation = await auth().signInWithPhoneNumber(phoneNumber);
-  return confirmation;
-};
+// const auth = getAuth(app);
 
-export const verifyPhoneOTP = async (
-  confirmation: any,
-  otpCode: string
-): Promise<any> => {
-  const userCredential = await confirmation.confirm(otpCode);
-  return userCredential.user;
-};
+// export const loginUser = async (
+//   email: string,
+//   password: string
+// ): Promise<any> => {
+//   const userCredential = await signInWithEmailAndPassword(auth, email, password);
+//   return userCredential.user;
+// };
 
-export const logoutUser = async (): Promise<void> => {
-  await auth().signOut();
-};
+// export const registerUser = async (
+//   email: string,
+//   password: string
+// ): Promise<any> => {
+//   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+//   return userCredential.user;
+// };
+
+// export const logoutUser = async (): Promise<void> => {
+//   await signOut(auth);
+// };
