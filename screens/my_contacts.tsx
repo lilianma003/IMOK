@@ -1,63 +1,90 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Linking } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  View, Text, TextInput, TouchableOpacity,
+  FlatList, StyleSheet, Linking, ActivityIndicator, Alert
+} from 'react-native';
+import { auth } from '../src/config/firebaseConfig';
+import {
+  getContacts,
+  addContact as addContactToFirebase,
+  deleteContact as deleteContactFromFirebase,
+  Contact,
+} from '../src/services/contactService';
 
-const STORAGE_KEY = 'emergency_contacts';
-
-type Contact = {
-  id: string;
-  name: string;
-  phone: string;
-};
-
-export default function MyContacts() {
+export default function MyContacts(): React.JSX.Element {
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [name, setName] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
 
-  // Load saved contacts on mount
+  const userId = auth.currentUser?.uid;
+
+  // Load contacts from Firebase on mount
   useEffect(() => {
     const load = async () => {
-      const raw = await AsyncStorage.getItem(STORAGE_KEY);
-      if (raw) setContacts(JSON.parse(raw));
+      if (!userId) return;
+      try {
+        const data = await getContacts(userId);
+        setContacts(data);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to load contacts');
+      } finally {
+        setLoading(false);
+      }
     };
     load();
-  }, []);
+  }, [userId]);
 
-  // Save contacts whenever they change
-  useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(contacts));
-  }, [contacts]);
-
-  const addContact = () => {
+  const handleAddContact = async (): Promise<void> => {
     if (!name.trim() || !phone.trim()) return;
-    const newContact: Contact = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      phone: phone.trim(),
-    };
-    setContacts(prev => [...prev, newContact]);
-    setName('');
-    setPhone('');
+    if (!userId) return;
+    try {
+      setSaving(true);
+      const id = await addContactToFirebase(userId, {
+        name: name.trim(),
+        phone: phone.trim(),
+      });
+      setContacts(prev => [...prev, { id, name: name.trim(), phone: phone.trim() }]);
+      setName('');
+      setPhone('');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add contact');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const deleteContact = (id: string) => {
-    setContacts(prev => prev.filter(c => c.id !== id));
+  const handleDeleteContact = async (contactId: string): Promise<void> => {
+    if (!userId) return;
+    try {
+      await deleteContactFromFirebase(userId, contactId);
+      setContacts(prev => prev.filter(c => c.id !== contactId));
+    } catch (error) {
+      Alert.alert('Error', 'Failed to delete contact');
+    }
   };
 
-  const callContact = (phone: string) => {
+  const callContact = (phone: string): void => {
     Linking.openURL(`tel:${phone}`);
   };
 
-  const textContact = (phone: string) => {
+  const textContact = (phone: string): void => {
     Linking.openURL(`sms:${phone}`);
   };
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#458cff" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Emergency Contacts</Text>
 
-      {/* Add contact form */}
       <TextInput
         style={styles.input}
         placeholder="Name"
@@ -71,11 +98,17 @@ export default function MyContacts() {
         onChangeText={setPhone}
         keyboardType="phone-pad"
       />
-      <TouchableOpacity style={styles.addButton} onPress={addContact}>
-        <Text style={styles.addButtonText}>Add Contact</Text>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={handleAddContact}
+        disabled={saving}
+      >
+        {saving
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={styles.addButtonText}>Add Contact</Text>
+        }
       </TouchableOpacity>
 
-      {/* Contact list */}
       <FlatList
         data={contacts}
         keyExtractor={item => item.id}
@@ -92,21 +125,30 @@ export default function MyContacts() {
               <TouchableOpacity onPress={() => textContact(item.phone)}>
                 <Text style={styles.actionText}>Text</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => deleteContact(item.id)}>
+              <TouchableOpacity onPress={() => handleDeleteContact(item.id)}>
                 <Text style={styles.actionDelete}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
+        ListEmptyComponent={
+          <Text style={styles.empty}>No contacts yet. Add one above.</Text>
+        }
       />
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
     backgroundColor: '#fff',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
     fontSize: 24,
@@ -168,5 +210,11 @@ const styles = StyleSheet.create({
   actionDelete: {
     color: '#c62828',
     fontWeight: '600',
+  },
+  empty: {
+    textAlign: 'center',
+    color: '#999',
+    marginTop: 32,
+    fontSize: 15,
   },
 });

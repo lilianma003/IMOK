@@ -7,13 +7,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { registerWithEmail } from '../src/services/authService';
 import { createUserDocument } from '../src/services/userService';
 import { createLocationDocument } from '../src/services/locationService';
+import { auth } from '../src/config/firebaseConfig';
 
 type AuthStackParamList = {
   Welcome: undefined;
   Login: undefined;
   Register: undefined;
 };
-
 type RegisterNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
 interface Props {
