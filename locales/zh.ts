@@ -38,7 +38,7 @@ export default {
 
     ],
   },
-  contacts: {
+  my_contacts: {
     title: '紧急联系人',
     namePlaceholder: '姓名',
     phonePlaceholder: '电话号码',
