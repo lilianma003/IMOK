@@ -3,6 +3,7 @@ import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 
 interface UserData {
   name: string;
+  email: string;
   phoneNumber: string;
   profilePicture: string;
   createdAt: Date;
@@ -10,11 +11,12 @@ interface UserData {
 
 export const createUserDocument = async (
   userId: string,
-  userData: Pick<UserData, 'name' | 'phoneNumber'>
+  userData: Pick<UserData, 'name' | 'email' | 'phoneNumber'>
 ): Promise<void> => {
   await setDoc(doc(db, 'users', userId), {
     name: userData.name,
-    phoneNumber: userData.phoneNumber,
+    email: userData.email,
+    phoneNumber: userData.phoneNumber ?? '',
     profilePicture: '',
     createdAt: new Date(),
   });

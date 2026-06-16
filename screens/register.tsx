@@ -4,7 +4,7 @@ import {
   StyleSheet, Alert, ActivityIndicator, ScrollView
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { sendPhoneOTP, verifyPhoneOTP } from '../src/services/authService';
+import { registerWithEmail } from '../src/services/authService';
 import { createUserDocument } from '../src/services/userService';
 import { createLocationDocument } from '../src/services/locationService';
 
@@ -22,40 +22,31 @@ interface Props {
 
 export default function Register({ navigation }: Props): React.JSX.Element {
   const [name, setName] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
-  const [otpCode, setOtpCode] = useState<string>('');
-  const [confirmation, setConfirmation] = useState<any>(null);
+  const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-  const [step, setStep] = useState<1 | 2>(1);
 
-  const handleSendOTP = async (): Promise<void> => {
-    if (!name || !phoneNumber) {
-      Alert.alert('Error', 'Please fill in all fields');
+  const handleRegister = async (): Promise<void> => {
+    if (!name || !email || !password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
     try {
       setLoading(true);
-      const confirmationResult = await sendPhoneOTP(phoneNumber);
-      setConfirmation(confirmationResult);
-      setStep(2);
-    } catch (error) {
-      Alert.alert('Error', (error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyAndRegister = async (): Promise<void> => {
-    if (!otpCode || !confirmation) {
-      Alert.alert('Error', 'Please enter the OTP code');
-      return;
-    }
-    try {
-      setLoading(true);
-      const user = await verifyPhoneOTP(confirmation, otpCode);
-      await createUserDocument(user.uid, { name, phoneNumber });
+      const user = await registerWithEmail(email, password);
+      await createUserDocument(user.uid, { name, email, phoneNumber });
       await createLocationDocument(user.uid);
-      // onAuthStateChanged in App.tsx handles the redirect automatically
+      // onAuthStateChanged in App.tsx handles redirect automatically
     } catch (error) {
       Alert.alert('Registration Failed', (error as Error).message);
     } finally {
@@ -71,61 +62,56 @@ export default function Register({ navigation }: Props): React.JSX.Element {
 
       <Text style={styles.title}>Create Account</Text>
 
-      {step === 1 && (
-        <>
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name"
-            value={name}
-            onChangeText={setName}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Phone Number (e.g. +12065550100)"
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            keyboardType="phone-pad"
-          />
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleSendOTP}
-            disabled={loading}
-          >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.buttonText}>Send OTP</Text>
-            }
-          </TouchableOpacity>
-        </>
-      )}
+      <TextInput
+        style={styles.input}
+        placeholder="Full Name"
+        value={name}
+        onChangeText={setName}
+      />
 
-      {step === 2 && (
-        <>
-          <Text style={styles.subtitle}>
-            Enter the OTP sent to {phoneNumber}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="OTP Code"
-            value={otpCode}
-            onChangeText={setOtpCode}
-            keyboardType="number-pad"
-          />
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleVerifyAndRegister}
-            disabled={loading}
-          >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.buttonText}>Verify & Create Account</Text>
-            }
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setStep(1)}>
-            <Text style={styles.link}>Go back</Text>
-          </TouchableOpacity>
-        </>
-      )}
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Phone Number (optional, e.g. +12065550100)"
+        value={phoneNumber}
+        onChangeText={setPhoneNumber}
+        keyboardType="phone-pad"
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Confirm Password"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        secureTextEntry
+      />
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleRegister}
+        disabled={loading}
+      >
+        {loading
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={styles.buttonText}>Create Account</Text>
+        }
+      </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate('Login')}>
         <Text style={styles.link}>Already have an account? Login</Text>
@@ -156,12 +142,6 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     textAlign: 'center',
     color: '#1565c0',
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 24,
-    color: '#555',
   },
   input: {
     borderWidth: 1,
