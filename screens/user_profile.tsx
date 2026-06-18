@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Alert, ActivityIndicator
+  StyleSheet, KeyboardAvoidingView, Alert, ActivityIndicator, Platform
 } from 'react-native';
 import { db, auth } from '../src/config/firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
@@ -50,7 +50,7 @@ export default function UserProfile() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAvoidingView contentContainerStyle={styles.container}>
       <Text style={styles.heading}>Emergency Profile</Text>
       <Text style={styles.subheading}>
         This information will be shared with your emergency contacts if you trigger SOS.
@@ -128,7 +128,7 @@ export default function UserProfile() {
           : <Text style={styles.buttonText}>{saved ? '✓ Saved' : 'Save Profile'}</Text>
         }
       </TouchableOpacity>
-    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
