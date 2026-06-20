@@ -1,3 +1,4 @@
+import 'expo-dev-client';
 import './i18n';
 import { useEffect, useState } from 'react';
 import {
@@ -20,7 +21,7 @@ import Register from './screens/register';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-// ── Welcome screen ────────────────────────────────────────────────
+
 function WelcomeScreen({ navigation }: any) {
   return (
     <View style={styles.welcomeContainer}>

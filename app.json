@@ -16,6 +16,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.lilianma003.imok",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -29,27 +30,33 @@
         "ACCESS_COARSE_LOCATION",
         "FOREGROUND_SERVICE",
         "SCHEDULE_EXACT_ALARM",
-        "USE_EXACT_ALARM"
+        "USE_EXACT_ALARM",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
-      },
-      "plugins": [
-        [
-          "expo-notifications",
-          {
-            "icon": "./assets/notification-icon.png",
-            "color": "#1565c0",
-            "sounds": []
-          }
-        ],
-        [
-          "expo-location",
-          {
-            "locationAlwaysAndWhenInUsePermission": "Allow IMOK to use your location for emergency alerts."
-          }
-        ]
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "color": "#1565c0",
+          "sounds": []
+        }
       ],
-      "web": {
-        "favicon": "./assets/favicon.png"
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow IMOK to use your location for emergency alerts."
+        }
+      ]
+    ],
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4e26b615-a632-4a12-8755-4d09e40fafd0"
+      }
     }
   }
 }
