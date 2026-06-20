@@ -14,23 +14,30 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lilianma003.IMOK",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+      "bundleIdentifier": "com.lilianma003.imok"
     },
     "android": {
+      "package": "com.lilianma003.imok",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.lilianma003.IMOK"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "plugins": [
+      "expo-dev-client",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#1D9E75"
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "8ab41493-1250-425c-8328-d7f09621ffa6"
