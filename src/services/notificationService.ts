@@ -1,4 +1,6 @@
 import * as Notifications from 'expo-notifications';
+import { doc, updateDoc, getDocs, collection, where, query } from 'firebase/firestore';
+import { db } from '../config/firebaseConfig';
 
 export const setupNotificationHandler = (): void => {
   Notifications.setNotificationHandler({
@@ -23,19 +25,30 @@ export const setupNotificationCategories = async (): Promise<void> => {
   await Notifications.setNotificationCategoryAsync('checkin_response', [
     {
       identifier: 'YES',
-      buttonTitle: "✅ Yes, I'm okay",
+      buttonTitle: "Yes, I'm okay",
       options: { opensAppToForeground: false },
     },
     {
       identifier: 'NO',
-      buttonTitle: '🆘 No, send help',
+      buttonTitle: 'No, send help',
       options: { opensAppToForeground: true, isDestructive: true },
     },
   ]);
 };
 
-// Schedules the "are you okay?" notification at exact future time
-// Uses Android AlarmManager internally for precision
+export const registerFCMToken = async (userId: string): Promise<void> => {
+  try {
+    const token = await Notifications.getExpoPushTokenAsync({
+      projectId: '4e26b615-a632-4a12-8755-4d09e40fafd0', // from app.json > extra > eas > projectId
+    });
+    const expoPushToken = token.data;
+
+    await updateDoc(doc(db, 'users', userId), { fcmToken: expoPushToken });
+  } catch (error) {
+    console.log('Token registration error:', error);
+  }
+};
+
 export const scheduleCheckinNotification = async (
   secondsFromNow: number
 ): Promise<string> => {
@@ -43,7 +56,7 @@ export const scheduleCheckinNotification = async (
 
   const id = await Notifications.scheduleNotificationAsync({
     content: {
-      title: '⏰ Check-in Required',
+      title: 'Check-in required',
       body: "Are you okay? Tap YES to confirm or NO to alert your emergency contacts.",
       data: { type: 'checkin' },
       categoryIdentifier: 'checkin_response',
@@ -60,13 +73,12 @@ export const scheduleCheckinNotification = async (
   return id;
 };
 
-// Schedules the grace period expiry notification
 export const scheduleGraceExpiredNotification = async (
   secondsFromNow: number
 ): Promise<string> => {
   const id = await Notifications.scheduleNotificationAsync({
     content: {
-      title: '🆘 Emergency Alert Sent',
+      title: 'Emergency alert sent',
       body: 'You did not respond in time. Your emergency contacts have been notified.',
       data: { type: 'grace_expired' },
       sound: true,
@@ -107,4 +119,36 @@ export const cancelAllCheckinNotifications = async (): Promise<void> => {
       await Notifications.cancelScheduledNotificationAsync(n.identifier);
     }
   }
+};
+
+export const sendEmergencyPush = async (
+  fcmTokens: string[],
+  senderName: string,
+  locationUrl: string | null
+): Promise<void> => {
+  const messages = fcmTokens.map(token => ({
+    to: token,
+    sound: 'default',
+    title: 'Emergency alert',
+    body: `${senderName} may need help!${locationUrl ? ' Tap to see location.' : ''}`,
+    data: {
+      type: 'emergency_alert',
+      senderName,
+      locationUrl: locationUrl ?? '',
+    },
+    priority: 'high',
+    channelId: 'emergency_alerts',
+  }));
+
+  const response = await fetch('https://exp.host/--/api/v2/push/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify(messages),
+  });
+
+  const result = await response.json();
+  console.log('Push result:', result);
 };

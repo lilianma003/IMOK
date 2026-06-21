@@ -17,10 +17,10 @@ import Resources from './screens/resources';
 import UserProfile from './screens/user_profile';
 import Login from './screens/login';
 import Register from './screens/register';
+import { registerFCMToken } from './src/services/notificationService';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
-
 
 function WelcomeScreen({ navigation }: any) {
   return (
@@ -95,6 +95,17 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      setLoading(false);
+      if (firebaseUser) {
+        await registerFCMToken(firebaseUser.uid);
+      }
     });
     return unsubscribe;
   }, []);
