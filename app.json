@@ -17,6 +17,7 @@
     },
     "android": {
       "package": "com.lilianma003.imok",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
