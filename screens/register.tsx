@@ -8,6 +8,7 @@ import { registerWithEmail } from '../src/services/authService';
 import { createUserDocument } from '../src/services/userService';
 import { createLocationDocument } from '../src/services/locationService';
 import { auth } from '../src/config/firebaseConfig';
+import { checkAndAcceptInvites } from '../src/services/inviteService';
 
 type AuthStackParamList = {
   Welcome: undefined;
@@ -46,7 +47,12 @@ export default function Register({ navigation }: Props): React.JSX.Element {
       const user = await registerWithEmail(email, password);
       await createUserDocument(user.uid, { name, email, phoneNumber });
       await createLocationDocument(user.uid);
-      // onAuthStateChanged in App.tsx handles redirect automatically
+
+      // Check if this email was invited by anyone and auto-link contacts
+      await checkAndAcceptInvites(user.uid, email, name, phoneNumber);
+
+      await auth.signOut();
+      navigation.navigate('RegisterSuccess');
     } catch (error) {
       Alert.alert('Registration Failed', (error as Error).message);
     } finally {

@@ -4,6 +4,7 @@ import {
   Alert, ScrollView, AppState, AppStateStatus
 } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { auth } from '../src/config/firebaseConfig';
 import {
   getCheckinState,
   saveCheckinState,
@@ -18,18 +19,21 @@ import {
   scheduleGraceExpiredNotification,
   cancelAllCheckinNotifications,
   sendImmediateNotification,
+  sendEmergencyPush,
 } from '../src/services/notificationService';
 import {
   requestLocationPermissions,
   getCurrentLocation,
 } from '../src/services/locationService';
+import { getContacts } from '../src/services/contactService';
+import { getUserDocument } from '../src/services/userService';
 
 setupNotificationHandler();
 
-const GRACE_PERIOD_SECONDS = 15 * 60; // 15 minutes
+const GRACE_PERIOD_SECONDS = 15 * 60;
 
 const DURATION_OPTIONS = [
-  { label: '1 min', value: 1 },    // for testing
+  { label: '1 min', value: 1 },
   { label: '15 min', value: 15 },
   { label: '30 min', value: 30 },
   { label: '1 hour', value: 60 },
@@ -50,11 +54,9 @@ export default function CheckinTimer(): React.JSX.Element {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
-  // Load persisted state on mount
   useEffect(() => {
     initializeAsync();
 
-    // Listen for app coming to foreground — sync state
     const appStateSub = AppState.addEventListener('change', (nextState) => {
       if (
         appStateRef.current.match(/inactive|background/) &&
@@ -65,7 +67,6 @@ export default function CheckinTimer(): React.JSX.Element {
       appStateRef.current = nextState;
     });
 
-    // Listen for notification button responses
     const notifSub = Notifications.addNotificationResponseReceivedListener(
       handleNotificationResponse
     );
@@ -77,16 +78,11 @@ export default function CheckinTimer(): React.JSX.Element {
     };
   }, []);
 
-  // Update countdown every second when timer is active
   useEffect(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
-
     if (state.isActive) {
-      intervalRef.current = setInterval(() => {
-        updateCountdownDisplay();
-      }, 1000);
+      intervalRef.current = setInterval(updateCountdownDisplay, 1000);
     }
-
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -104,38 +100,6 @@ export default function CheckinTimer(): React.JSX.Element {
     setState(saved);
   };
 
-  const updateCountdownDisplay = useCallback((): void => {
-    setState(current => {
-      const now = Date.now();
-
-      if (current.status === 'running' && current.endTime) {
-        const diff = current.endTime - now;
-        setTimeRemaining(diff > 0 ? formatMs(diff) : 'Awaiting your response...');
-      } else if (current.status === 'grace' && current.gracePeriodEnd) {
-        const diff = current.gracePeriodEnd - now;
-        setTimeRemaining(diff > 0 ? `Grace period: ${formatMs(diff)}` : 'Alerting contacts...');
-      }
-
-      return current;
-    });
-  }, []);
-
-  const handleNotificationResponse = useCallback(async (
-    response: Notifications.NotificationResponse
-  ): Promise<void> => {
-    const actionId = response.actionIdentifier;
-    const type = response.notification.request.content.data?.type;
-
-    if (type === 'checkin') {
-      if (actionId === 'YES') {
-        await handleUserOkay();
-      } else if (actionId === 'NO') {
-        await handleSendAlert();
-      }
-      // Default tap (opens app) — user can respond in app
-    }
-  }, []);
-
   const formatMs = (ms: number): string => {
     const totalSeconds = Math.max(0, Math.floor(ms / 1000));
     const h = Math.floor(totalSeconds / 3600);
@@ -146,16 +110,40 @@ export default function CheckinTimer(): React.JSX.Element {
     return `${s}s`;
   };
 
+  const updateCountdownDisplay = useCallback((): void => {
+    setState(current => {
+      const now = Date.now();
+      if (current.status === 'running' && current.endTime) {
+        const diff = current.endTime - now;
+        setTimeRemaining(diff > 0 ? formatMs(diff) : 'Awaiting your response...');
+      } else if (current.status === 'grace' && current.gracePeriodEnd) {
+        const diff = current.gracePeriodEnd - now;
+        setTimeRemaining(diff > 0 ? `Grace period: ${formatMs(diff)}` : 'Alerting contacts...');
+      }
+      return current;
+    });
+  }, []);
+
+  const handleNotificationResponse = useCallback(async (
+    response: Notifications.NotificationResponse
+  ): Promise<void> => {
+    const actionId = response.actionIdentifier;
+    const type = response.notification.request.content.data?.type;
+    if (type === 'checkin') {
+      if (actionId === 'YES') {
+        await handleUserOkay();
+      } else if (actionId === 'NO') {
+        await handleSendAlert();
+      }
+    }
+  }, []);
+
   const startTimer = async (): Promise<void> => {
     const durationSeconds = selectedMinutes * 60;
     const endTime = Date.now() + durationSeconds * 1000;
     const gracePeriodEnd = endTime + GRACE_PERIOD_SECONDS * 1000;
 
-    // Schedule precise check-in notification via Android AlarmManager
     const notificationId = await scheduleCheckinNotification(durationSeconds);
-
-    // Also schedule grace period expiry notification
-    // This fires if user never responds — totalSeconds = duration + grace
     await scheduleGraceExpiredNotification(durationSeconds + GRACE_PERIOD_SECONDS);
 
     const newState: CheckinState = {
@@ -170,7 +158,7 @@ export default function CheckinTimer(): React.JSX.Element {
     setState(newState);
 
     Alert.alert(
-      '✅ Timer Started',
+      'Timer started',
       `You'll receive a check-in in ${selectedMinutes} minute${selectedMinutes > 1 ? 's' : ''}. If you don't respond within 15 minutes after that, your emergency contacts will be alerted.`
     );
   };
@@ -188,43 +176,61 @@ export default function CheckinTimer(): React.JSX.Element {
     setTimeRemaining('');
   };
 
+  const triggerEmergencyAlert = async (): Promise<void> => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    const [location, userDoc, contacts] = await Promise.all([
+      getCurrentLocation(),
+      getUserDocument(userId),
+      getContacts(userId),
+    ]);
+
+    const tokens = contacts
+      .filter(c => c.status === 'linked' && c.fcmToken)
+      .map(c => c.fcmToken as string);
+
+    if (tokens.length === 0) {
+      Alert.alert(
+        'No linked contacts',
+        'None of your emergency contacts have the IMOK app installed.'
+      );
+      return;
+    }
+
+    await sendEmergencyPush(
+      tokens,
+      userDoc?.name ?? 'Someone',
+      location?.mapsUrl ?? null
+    );
+
+    const triggered: CheckinState = { ...state, status: 'triggered' };
+    await saveCheckinState(triggered);
+    setState(triggered);
+
+    await cancelAllCheckinNotifications();
+    await sendImmediateNotification(
+      'Alert sent',
+      'Your emergency contacts have been notified.',
+      'alert_sent'
+    );
+  };
+
   const handleUserOkay = async (): Promise<void> => {
     await stopTimer();
-    Alert.alert("✅ Glad you're okay!", 'Timer has been reset.');
+    Alert.alert("Glad you're okay!", 'Timer has been reset.');
   };
 
   const handleSendAlert = async (): Promise<void> => {
     Alert.alert(
-      '🆘 Send Emergency Alert?',
+      'Send emergency alert?',
       'This will notify your emergency contacts with your current location.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Send Alert',
           style: 'destructive',
-          onPress: async () => {
-            const location = await getCurrentLocation();
-            const locationText = location
-              ? `\nLocation: ${location.mapsUrl}`
-              : '\nLocation unavailable';
-
-            // SMS implementation goes here — pass locationText to contacts
-            console.log('ALERT TRIGGERED', locationText);
-
-            const triggered: CheckinState = {
-              ...state,
-              status: 'triggered',
-            };
-            await saveCheckinState(triggered);
-            setState(triggered);
-
-            await cancelAllCheckinNotifications();
-            await sendImmediateNotification(
-              '🆘 Alert Sent',
-              'Your emergency contacts have been notified.',
-              'alert_sent'
-            );
-          },
+          onPress: triggerEmergencyAlert,
         },
       ]
     );
@@ -241,9 +247,9 @@ export default function CheckinTimer(): React.JSX.Element {
 
   const statusLabel = (): string => {
     switch (state.status) {
-      case 'running': return '🟢 Timer Running';
-      case 'grace': return '🟠 Awaiting Response';
-      case 'triggered': return '🔴 Alert Triggered';
+      case 'running': return 'Timer running';
+      case 'grace': return 'Awaiting response';
+      case 'triggered': return 'Alert triggered';
       default: return 'No active timer';
     }
   };
@@ -255,7 +261,6 @@ export default function CheckinTimer(): React.JSX.Element {
         Set a timer. If you don't respond when it ends, your emergency contacts will be alerted.
       </Text>
 
-      {/* Status display */}
       <View style={[styles.statusBox, { borderColor: statusColor() }]}>
         <Text style={[styles.statusLabel, { color: statusColor() }]}>
           {statusLabel()}
@@ -267,7 +272,6 @@ export default function CheckinTimer(): React.JSX.Element {
         )}
       </View>
 
-      {/* Duration picker — only shown when idle */}
       {!state.isActive && (
         <>
           <Text style={styles.sectionLabel}>Select duration:</Text>
@@ -290,31 +294,27 @@ export default function CheckinTimer(): React.JSX.Element {
               </TouchableOpacity>
             ))}
           </View>
-
           <TouchableOpacity style={styles.startButton} onPress={startTimer}>
-            <Text style={styles.startButtonText}>Start Check-in Timer</Text>
+            <Text style={styles.startButtonText}>Start check-in timer</Text>
           </TouchableOpacity>
         </>
       )}
 
-      {/* Active controls */}
       {state.isActive && (
         <View style={styles.activeControls}>
           {(state.status === 'running' || state.status === 'grace') && (
             <>
               <TouchableOpacity style={styles.okayButton} onPress={handleUserOkay}>
-                <Text style={styles.actionButtonText}>✅ I'm Okay</Text>
+                <Text style={styles.actionButtonText}>I'm okay</Text>
               </TouchableOpacity>
-
               <TouchableOpacity style={styles.helpButton} onPress={handleSendAlert}>
-                <Text style={styles.actionButtonText}>🆘 Send Alert Now</Text>
+                <Text style={styles.actionButtonText}>Send alert now</Text>
               </TouchableOpacity>
             </>
           )}
-
           <TouchableOpacity style={styles.cancelButton} onPress={stopTimer}>
             <Text style={styles.cancelButtonText}>
-              {state.status === 'triggered' ? 'Reset Timer' : 'Cancel Timer'}
+              {state.status === 'triggered' ? 'Reset timer' : 'Cancel timer'}
             </Text>
           </TouchableOpacity>
         </View>

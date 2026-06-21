@@ -1,16 +1,17 @@
 import { db } from '../config/firebaseConfig';
 import {
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  doc,
+  collection, addDoc, getDocs,
+  deleteDoc, doc, query, where,
 } from 'firebase/firestore';
 
 export interface Contact {
   id: string;
   name: string;
   phone: string;
+  email: string;
+  linkedUserId: string | null;
+  fcmToken: string | null;
+  status: 'linked' | 'not_found';
 }
 
 export const getContacts = async (userId: string): Promise<Contact[]> => {
@@ -20,9 +21,35 @@ export const getContacts = async (userId: string): Promise<Contact[]> => {
 
 export const addContact = async (
   userId: string,
-  contact: Omit<Contact, 'id'>
+  contact: { name: string; phone: string; email: string }
 ): Promise<string> => {
-  const ref = await addDoc(collection(db, 'users', userId, 'contacts'), contact);
+  // Look up contact by email in Firestore
+  const q = query(
+    collection(db, 'users'),
+    where('email', '==', contact.email.toLowerCase())
+  );
+  const snap = await getDocs(q);
+
+  let linkedUserId: string | null = null;
+  let fcmToken: string | null = null;
+  let status: 'linked' | 'not_found' = 'not_found';
+
+  if (!snap.empty) {
+    const contactUser = snap.docs[0];
+    linkedUserId = contactUser.id;
+    fcmToken = contactUser.data().fcmToken ?? null;
+    status = 'linked';
+  }
+
+  const ref = await addDoc(collection(db, 'users', userId, 'contacts'), {
+    name: contact.name,
+    phone: contact.phone,
+    email: contact.email.toLowerCase(),
+    linkedUserId,
+    fcmToken,
+    status,
+  });
+
   return ref.id;
 };
 
