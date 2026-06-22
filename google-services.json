@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "384147725074",
+    "project_id": "imok-tentative",
+    "storage_bucket": "imok-tentative.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:384147725074:android:4ec966203c82ed50f5f1cb",
+        "android_client_info": {
+          "package_name": "com.lilianma003.imok"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjA6P171Bcl-gLY9UZEkZozHI_I3z2R6I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
