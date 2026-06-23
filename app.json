@@ -48,7 +48,9 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow IMOK to use your location for emergency alerts."
+          "locationAlwaysAndWhenInUsePermission": "IMOK uses your location during an active check-in so your emergency contacts can find you if you don't check in.",
+          "locationWhenInUsePermission": "IMOK uses your location to share it with your emergency contacts when you send an SOS alert.",
+          "isIosBackgroundLocationEnabled": true
         }
       ]
     ],
