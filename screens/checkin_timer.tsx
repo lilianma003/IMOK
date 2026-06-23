@@ -47,6 +47,7 @@ export default function CheckinTimer(): React.JSX.Element {
     endTime: null,
     gracePeriodEnd: null,
     notificationId: null,
+    durationSeconds: null,
     status: 'idle',
   });
   const [selectedMinutes, setSelectedMinutes] = useState<number>(30);
@@ -138,8 +139,10 @@ export default function CheckinTimer(): React.JSX.Element {
     }
   }, []);
 
-  const startTimer = async (): Promise<void> => {
-    const durationSeconds = selectedMinutes * 60;
+  // Starts a fresh timer with the given duration
+  const runTimer = async (durationSeconds: number): Promise<void> => {
+    await cancelAllCheckinNotifications();
+
     const endTime = Date.now() + durationSeconds * 1000;
     const gracePeriodEnd = endTime + GRACE_PERIOD_SECONDS * 1000;
 
@@ -151,15 +154,22 @@ export default function CheckinTimer(): React.JSX.Element {
       endTime,
       gracePeriodEnd,
       notificationId,
+      durationSeconds,
       status: 'running',
     };
 
     await saveCheckinState(newState);
     setState(newState);
+  };
+
+  const startTimer = async (): Promise<void> => {
+    const durationSeconds = selectedMinutes * 60;
+    await runTimer(durationSeconds);
 
     Alert.alert(
       'Timer started',
-      `You'll receive a check-in in ${selectedMinutes} minute${selectedMinutes > 1 ? 's' : ''}. If you don't respond within 15 minutes after that, your emergency contacts will be alerted.`
+      `You'll receive a check-in in ${selectedMinutes} minute${selectedMinutes > 1 ? 's' : ''}. ` +
+      `If you don't respond within 15 minutes after that, your emergency contacts will be alerted.`
     );
   };
 
@@ -171,6 +181,7 @@ export default function CheckinTimer(): React.JSX.Element {
       endTime: null,
       gracePeriodEnd: null,
       notificationId: null,
+      durationSeconds: null,
       status: 'idle',
     });
     setTimeRemaining('');
@@ -216,9 +227,23 @@ export default function CheckinTimer(): React.JSX.Element {
     );
   };
 
+  // ── Response handlers ────────────────────────────────────────────
+
+  // Timer ended — user confirms they are fully okay, stops timer
   const handleUserOkay = async (): Promise<void> => {
     await stopTimer();
     Alert.alert("Glad you're okay!", 'Timer has been reset.');
+  };
+
+  // Timer ended — user is okay for now, restarts same duration
+  const handleOkayForNow = async (): Promise<void> => {
+    const duration = state.durationSeconds ?? selectedMinutes * 60;
+    await runTimer(duration);
+    const minutes = Math.round(duration / 60);
+    Alert.alert(
+      'Timer restarted',
+      `Check-in timer restarted for ${minutes} minute${minutes !== 1 ? 's' : ''}.`
+    );
   };
 
   const handleSendAlert = async (): Promise<void> => {
@@ -235,6 +260,8 @@ export default function CheckinTimer(): React.JSX.Element {
       ]
     );
   };
+
+  // ── Status helpers ───────────────────────────────────────────────
 
   const statusColor = (): string => {
     switch (state.status) {
@@ -254,6 +281,11 @@ export default function CheckinTimer(): React.JSX.Element {
     }
   };
 
+  // Whether timer has expired and we're waiting for a response
+  const isAwaitingResponse = (): boolean =>
+    state.status === 'grace' ||
+    (state.status === 'running' && !!state.endTime && Date.now() >= state.endTime);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Check-in Timer</Text>
@@ -261,6 +293,7 @@ export default function CheckinTimer(): React.JSX.Element {
         Set a timer. If you don't respond when it ends, your emergency contacts will be alerted.
       </Text>
 
+      {/* Status box */}
       <View style={[styles.statusBox, { borderColor: statusColor() }]}>
         <Text style={[styles.statusLabel, { color: statusColor() }]}>
           {statusLabel()}
@@ -272,6 +305,7 @@ export default function CheckinTimer(): React.JSX.Element {
         )}
       </View>
 
+      {/* Duration picker — idle only */}
       {!state.isActive && (
         <>
           <Text style={styles.sectionLabel}>Select duration:</Text>
@@ -300,23 +334,54 @@ export default function CheckinTimer(): React.JSX.Element {
         </>
       )}
 
+      {/* Active timer controls */}
       {state.isActive && (
         <View style={styles.activeControls}>
-          {(state.status === 'running' || state.status === 'grace') && (
+
+          {/* Timer expired response options */}
+          {(state.status === 'grace' || isAwaitingResponse()) && (
             <>
+              <Text style={styles.responsePrompt}>How are you doing?</Text>
+
               <TouchableOpacity style={styles.okayButton} onPress={handleUserOkay}>
                 <Text style={styles.actionButtonText}>I'm okay</Text>
+                <Text style={styles.actionButtonSub}>Stop the timer</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity style={styles.okayForNowButton} onPress={handleOkayForNow}>
+                <Text style={styles.actionButtonText}>I'm okay for now</Text>
+                <Text style={styles.actionButtonSub}>Repeat timer for same duration</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity style={styles.helpButton} onPress={handleSendAlert}>
-                <Text style={styles.actionButtonText}>Send alert now</Text>
+                <Text style={styles.actionButtonText}>Send alert</Text>
+                <Text style={styles.actionButtonSub}>Notify emergency contacts now</Text>
               </TouchableOpacity>
             </>
           )}
+
+          {/* Timer still running controls */}
+          {state.status === 'running' && !isAwaitingResponse() && (
+            <>
+              <TouchableOpacity style={styles.okayButton} onPress={handleUserOkay}>
+                <Text style={styles.actionButtonText}>I'm okay</Text>
+                <Text style={styles.actionButtonSub}>Stop the timer early</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.helpButton} onPress={handleSendAlert}>
+                <Text style={styles.actionButtonText}>Send alert now</Text>
+                <Text style={styles.actionButtonSub}>Notify emergency contacts immediately</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* Always show cancel */}
           <TouchableOpacity style={styles.cancelButton} onPress={stopTimer}>
             <Text style={styles.cancelButtonText}>
               {state.status === 'triggered' ? 'Reset timer' : 'Cancel timer'}
             </Text>
           </TouchableOpacity>
+
         </View>
       )}
     </ScrollView>
@@ -404,8 +469,21 @@ const styles = StyleSheet.create({
   activeControls: {
     gap: 12,
   },
+  responsePrompt: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
   okayButton: {
     backgroundColor: '#2e7d32',
+    padding: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  okayForNowButton: {
+    backgroundColor: '#1565c0',
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',
@@ -420,6 +498,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  actionButtonSub: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 12,
+    marginTop: 3,
   },
   cancelButton: {
     borderWidth: 2,
