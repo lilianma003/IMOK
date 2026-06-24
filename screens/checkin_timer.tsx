@@ -27,6 +27,7 @@ import {
 } from '../src/services/locationService';
 import { getContacts } from '../src/services/contactService';
 import { getUserDocument } from '../src/services/userService';
+import SOSButton from './sos_button';
 
 setupNotificationHandler();
 
@@ -384,6 +385,8 @@ export default function CheckinTimer(): React.JSX.Element {
 
         </View>
       )}
+
+      <SOSButton onTrigger={triggerEmergencyAlert} />
     </ScrollView>
   );
 }
