@@ -7,6 +7,7 @@ export interface CheckinState {
   endTime: number | null;
   gracePeriodEnd: number | null;
   notificationId: string | null;
+  durationSeconds: number | null;
   status: 'idle' | 'running' | 'grace' | 'triggered';
 }
 
@@ -15,6 +16,7 @@ const DEFAULT_STATE: CheckinState = {
   endTime: null,
   gracePeriodEnd: null,
   notificationId: null,
+  durationSeconds: null,
   status: 'idle',
 };
 

@@ -18,6 +18,7 @@ import UserProfile from './screens/user_profile';
 import Login from './screens/login';
 import Register from './screens/register';
 import { registerFCMToken } from './src/services/notificationService';
+import RegisterSuccess from './screens/register_success';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -82,6 +83,7 @@ function AuthStack() {
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Login" component={Login} />
       <Stack.Screen name="Register" component={Register} />
+      <Stack.Screen name="RegisterSuccess" component={RegisterSuccess} />
     </Stack.Navigator>
   );
 }

@@ -5,11 +5,10 @@ import { db } from '../config/firebaseConfig';
 export const setupNotificationHandler = (): void => {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true,
+      shouldShowBanner: true,   // replaces shouldShowAlert
+      shouldShowList: true,
       shouldPlaySound: true,
       shouldSetBadge: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
     }),
   });
 };
