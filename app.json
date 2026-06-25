@@ -37,6 +37,15 @@
         "SCHEDULE_EXACT_ALARM",
         "USE_EXACT_ALARM",
         "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "SCHEDULE_EXACT_ALARM",
+        "USE_EXACT_ALARM",
+        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
@@ -65,6 +74,12 @@
         "projectId": "4e26b615-a632-4a12-8755-4d09e40fafd0"
       }
     },
-    "owner": "lilianma003"
+    "owner": "lilianma003",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/4e26b615-a632-4a12-8755-4d09e40fafd0"
+    }
   }
 }
