@@ -1,7 +1,7 @@
 import { db } from '../config/firebaseConfig';
 import {
   collection, addDoc, getDocs,
-  deleteDoc, doc, query, where,
+  deleteDoc, doc, query, where, updateDoc
 } from 'firebase/firestore';
 
 export interface Contact {
@@ -58,4 +58,35 @@ export const deleteContact = async (
   contactId: string
 ): Promise<void> => {
   await deleteDoc(doc(db, 'users', userId, 'contacts', contactId));
+};
+
+export const refreshContactStatuses = async (userId: string): Promise<void> => {
+  const contacts = await getContacts(userId);
+
+  for (const contact of contacts) {
+    const q = query(
+      collection(db, 'users'),
+      where('email', '==', contact.email.toLowerCase())
+    );
+    const snap = await getDocs(q);
+
+    if (!snap.empty) {
+      const found = snap.docs[0];
+      const fcmToken = found.data().fcmToken ?? null;
+      const linkedUserId = found.id;
+
+      // Only update if something changed
+      if (
+        contact.status !== 'linked' ||
+        contact.fcmToken !== fcmToken ||
+        contact.linkedUserId !== linkedUserId
+      ) {
+        await updateDoc(doc(db, 'users', userId, 'contacts', contact.id), {
+          linkedUserId,
+          fcmToken,
+          status: 'linked',
+        });
+      }
+    }
+  }
 };

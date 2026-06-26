@@ -38,11 +38,10 @@ export const setupNotificationCategories = async (): Promise<void> => {
 export const registerFCMToken = async (userId: string): Promise<void> => {
   try {
     const token = await Notifications.getExpoPushTokenAsync({
-      projectId: '4e26b615-a632-4a12-8755-4d09e40fafd0', // from app.json > extra > eas > projectId
+      projectId: 'your-expo-project-id',  // ← make sure this is set
     });
-    const expoPushToken = token.data;
-
-    await updateDoc(doc(db, 'users', userId), { fcmToken: expoPushToken });
+    console.log('FCM token registered:', token.data);
+    await updateDoc(doc(db, 'users', userId), { fcmToken: token.data });
   } catch (error) {
     console.log('Token registration error:', error);
   }

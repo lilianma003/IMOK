@@ -5,7 +5,6 @@ interface UserData {
   name: string;
   email: string;
   phoneNumber: string;
-  profilePicture: string;
   createdAt: Date;
 }
 
@@ -17,7 +16,6 @@ export const createUserDocument = async (
     name: userData.name,
     email: userData.email,
     phoneNumber: userData.phoneNumber ?? '',
-    profilePicture: '',
     createdAt: new Date(),
   });
 };

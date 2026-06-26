@@ -110,6 +110,7 @@ export default function App() {
       setLoading(false);
       if (firebaseUser) {
         await registerFCMToken(firebaseUser.uid);
+        await refreshContactStatuses(firebaseUser.uid);
       }
     });
     return unsubscribe;

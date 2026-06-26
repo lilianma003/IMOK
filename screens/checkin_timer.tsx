@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   Alert, ScrollView, AppState, AppStateStatus,
-  Modal, FlatList, Animated, Dimensions
+  Modal, FlatList, Animated,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as Notifications from 'expo-notifications';
@@ -26,6 +26,8 @@ import {
 import {
   requestLocationPermissions,
   getCurrentLocation,
+  saveLocationToFirestore,
+  getLastKnownLocation,
 } from '../src/services/locationService';
 import { getContacts } from '../src/services/contactService';
 import { getUserDocument } from '../src/services/userService';
@@ -34,6 +36,7 @@ import SOSButton from './sos_button';
 setupNotificationHandler();
 
 const GRACE_PERIOD_SECONDS = 15 * 60;
+const LOCATION_UPDATE_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const ITEM_HEIGHT = 56;
 const VISIBLE_ITEMS = 5;
 const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
@@ -42,7 +45,6 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 const SECONDS = Array.from({ length: 60 }, (_, i) => i);
 
-// Pad single digits with leading zero
 const pad = (n: number): string => String(n).padStart(2, '0');
 
 interface WheelPickerProps {
@@ -76,11 +78,7 @@ function WheelPicker({ data, selectedIndex, onChange, label }: WheelPickerProps)
     });
   };
 
-  const paddedData = [
-    ...Array(2).fill(null),
-    ...data,
-    ...Array(2).fill(null),
-  ];
+  const paddedData = [...Array(2).fill(null), ...data, ...Array(2).fill(null)];
 
   return (
     <View style={pickerStyles.column}>
@@ -121,34 +119,17 @@ function WheelPicker({ data, selectedIndex, onChange, label }: WheelPickerProps)
 }
 
 const pickerStyles = StyleSheet.create({
-  column: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  item: {
-    height: ITEM_HEIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  column: { flex: 1, alignItems: 'center' },
+  item: { height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' },
   itemText: {
     fontSize: 28,
     color: 'rgba(255,255,255,0.35)',
     fontWeight: '400',
     fontVariant: ['tabular-nums'],
   },
-  itemTextSelected: {
-    color: '#ffffff',
-    fontSize: 34,
-    fontWeight: '500',
-  },
-  itemTextNull: {
-    color: 'transparent',
-  },
-  label: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    marginTop: 6,
-  },
+  itemTextSelected: { color: '#ffffff', fontSize: 34, fontWeight: '500' },
+  itemTextNull: { color: 'transparent' },
+  label: { color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 6 },
 });
 
 export default function CheckinTimer(): React.JSX.Element {
@@ -162,17 +143,36 @@ export default function CheckinTimer(): React.JSX.Element {
     durationSeconds: null,
     status: 'idle',
   });
-  const [selectedMinutes, setSelectedMinutes] = useState<number>(30);
   const [timeRemaining, setTimeRemaining] = useState<string>('');
   const [settingsVisible, setSettingsVisible] = useState<boolean>(false);
-
-  // Picker state
   const [pickerHours, setPickerHours] = useState<number>(0);
   const [pickerMinutes, setPickerMinutes] = useState<number>(30);
   const [pickerSeconds, setPickerSeconds] = useState<number>(0);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+
+  // ── Location interval management ─────────────────────────────────
+
+  const startLocationUpdates = (userId: string): void => {
+    // Save immediately when timer starts
+    saveLocationToFirestore(userId);
+
+    // Then save every 5 minutes while timer is active
+    locationIntervalRef.current = setInterval(() => {
+      saveLocationToFirestore(userId);
+    }, LOCATION_UPDATE_INTERVAL_MS);
+  };
+
+  const stopLocationUpdates = (): void => {
+    if (locationIntervalRef.current) {
+      clearInterval(locationIntervalRef.current);
+      locationIntervalRef.current = null;
+    }
+  };
+
+  // ── Lifecycle ─────────────────────────────────────────────────────
 
   useEffect(() => {
     initializeAsync();
@@ -195,9 +195,11 @@ export default function CheckinTimer(): React.JSX.Element {
       appStateSub.remove();
       notifSub.remove();
       if (intervalRef.current) clearInterval(intervalRef.current);
+      stopLocationUpdates();
     };
   }, []);
 
+  // Countdown ticker
   useEffect(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (state.isActive) {
@@ -207,6 +209,21 @@ export default function CheckinTimer(): React.JSX.Element {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [state]);
+
+  // Start/stop location updates when timer active state changes
+  useEffect(() => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    if (state.isActive && state.status === 'running') {
+      // Only start if not already running
+      if (!locationIntervalRef.current) {
+        startLocationUpdates(userId);
+      }
+    } else {
+      stopLocationUpdates();
+    }
+  }, [state.isActive, state.status]);
 
   const initializeAsync = async (): Promise<void> => {
     await setupNotificationCategories();
@@ -255,6 +272,8 @@ export default function CheckinTimer(): React.JSX.Element {
     }
   }, []);
 
+  // ── Timer controls ───────────────────────────────────────────────
+
   const runTimer = async (durationSeconds: number): Promise<void> => {
     await cancelAllCheckinNotifications();
     const endTime = Date.now() + durationSeconds * 1000;
@@ -290,6 +309,7 @@ export default function CheckinTimer(): React.JSX.Element {
   };
 
   const stopTimer = async (): Promise<void> => {
+    stopLocationUpdates();
     await cancelAllCheckinNotifications();
     await clearCheckinState();
     setState({
@@ -303,28 +323,50 @@ export default function CheckinTimer(): React.JSX.Element {
     setTimeRemaining('');
   };
 
+  // ── Alert ────────────────────────────────────────────────────────
+
   const triggerEmergencyAlert = async (): Promise<void> => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
-    const [location, userDoc, contacts] = await Promise.all([
-      getCurrentLocation(),
+
+    const [lastLocation, userDoc, contacts] = await Promise.all([
+      getLastKnownLocation(userId),  // use last saved Firestore location
       getUserDocument(userId),
       getContacts(userId),
     ]);
+
+    // Fall back to live location if Firestore location is unavailable
+    const location = lastLocation ?? await getCurrentLocation();
+
     const tokens = contacts
       .filter(c => c.status === 'linked' && c.fcmToken)
       .map(c => c.fcmToken as string);
+
     if (tokens.length === 0) {
       Alert.alert(t('checkin.noLinkedContactsTitle'), t('checkin.noLinkedContactsMessage'));
       return;
     }
-    await sendEmergencyPush(tokens, userDoc?.name ?? t('checkin.someoneDefaultName'), location?.mapsUrl ?? null);
+
+    await sendEmergencyPush(
+      tokens,
+      userDoc?.name ?? t('checkin.someoneDefaultName'),
+      location?.mapsUrl ?? null
+    );
+
     const triggered: CheckinState = { ...state, status: 'triggered' };
     await saveCheckinState(triggered);
     setState(triggered);
+    stopLocationUpdates();
+
     await cancelAllCheckinNotifications();
-    await sendImmediateNotification(t('checkin.alertSentTitle'), t('checkin.alertSentMessage'), 'alert_sent');
+    await sendImmediateNotification(
+      t('checkin.alertSentTitle'),
+      t('checkin.alertSentMessage'),
+      'alert_sent'
+    );
   };
+
+  // ── Response handlers ────────────────────────────────────────────
 
   const handleUserOkay = async (): Promise<void> => {
     await stopTimer();
@@ -334,7 +376,10 @@ export default function CheckinTimer(): React.JSX.Element {
   const handleOkayForNow = async (): Promise<void> => {
     const duration = state.durationSeconds ?? (pickerHours * 3600 + pickerMinutes * 60 + pickerSeconds);
     await runTimer(duration);
-    Alert.alert(t('checkin.timerRestartedTitle'), t('checkin.timerRestartedMessage', { duration: formatMs(duration * 1000) }));
+    Alert.alert(
+      t('checkin.timerRestartedTitle'),
+      t('checkin.timerRestartedMessage', { duration: formatMs(duration * 1000) })
+    );
   };
 
   const handleSendAlert = async (): Promise<void> => {
@@ -347,6 +392,8 @@ export default function CheckinTimer(): React.JSX.Element {
       ]
     );
   };
+
+  // ── Status helpers ───────────────────────────────────────────────
 
   const statusColor = (): string => {
     switch (state.status) {
@@ -378,10 +425,11 @@ export default function CheckinTimer(): React.JSX.Element {
     return parts.length > 0 ? parts.join(' ') : `0${t('checkin.unitS')}`;
   };
 
+  // ── Render ───────────────────────────────────────────────────────
+
   return (
     <>
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Header row with settings button */}
         <View style={styles.headerRow}>
           <Text style={styles.title}>{t('checkin.title')}</Text>
           <TouchableOpacity
@@ -395,11 +443,8 @@ export default function CheckinTimer(): React.JSX.Element {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.subtitle}>
-          {t('checkin.subtitle')}
-        </Text>
+        <Text style={styles.subtitle}>{t('checkin.subtitle')}</Text>
 
-        {/* Selected duration display when idle */}
         {!state.isActive && (
           <TouchableOpacity
             style={styles.durationDisplay}
@@ -411,7 +456,6 @@ export default function CheckinTimer(): React.JSX.Element {
           </TouchableOpacity>
         )}
 
-        {/* Status box */}
         <View style={[styles.statusBox, { borderColor: statusColor() }]}>
           <Text style={[styles.statusLabel, { color: statusColor() }]}>
             {statusLabel()}
@@ -423,14 +467,12 @@ export default function CheckinTimer(): React.JSX.Element {
           )}
         </View>
 
-        {/* Start button — idle only */}
         {!state.isActive && (
           <TouchableOpacity style={styles.startButton} onPress={startTimer}>
             <Text style={styles.startButtonText}>{t('checkin.startButton')}</Text>
           </TouchableOpacity>
         )}
 
-        {/* Active timer controls */}
         {state.isActive && (
           <View style={styles.activeControls}>
             {(state.status === 'grace' || isAwaitingResponse()) && (
@@ -473,7 +515,6 @@ export default function CheckinTimer(): React.JSX.Element {
         <SOSButton onTrigger={triggerEmergencyAlert} />
       </ScrollView>
 
-      {/* iOS-style duration picker modal */}
       <Modal
         visible={settingsVisible}
         transparent
@@ -486,7 +527,6 @@ export default function CheckinTimer(): React.JSX.Element {
           onPress={() => setSettingsVisible(false)}
         />
         <View style={styles.modalSheet}>
-          {/* Modal header */}
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setSettingsVisible(false)}>
               <Text style={styles.modalCancel}>{t('checkin.modalCancel')}</Text>
@@ -496,12 +536,8 @@ export default function CheckinTimer(): React.JSX.Element {
               <Text style={styles.modalDone}>{t('checkin.modalDone')}</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Picker wheels */}
           <View style={styles.pickerContainer}>
-            {/* Selection highlight */}
             <View pointerEvents="none" style={styles.selectionHighlight} />
-
             <WheelPicker
               data={HOURS}
               selectedIndex={pickerHours}
@@ -528,37 +564,13 @@ export default function CheckinTimer(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 24,
-    backgroundColor: '#fff',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#5170ff',
-  },
-  settingsButton: {
-    padding: 6,
-  },
-  settingsIcon: {
-    fontSize: 26,
-  },
-  settingsIconDisabled: {
-    opacity: 0.3,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
-    lineHeight: 20,
-  },
+  container: { flexGrow: 1, padding: 24, backgroundColor: '#fff' },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  title: { fontSize: 26, fontWeight: 'bold', color: '#5170ff' },
+  settingsButton: { padding: 6 },
+  settingsIcon: { fontSize: 26 },
+  settingsIconDisabled: { opacity: 0.3 },
+  subtitle: { fontSize: 14, color: '#666', marginBottom: 20, lineHeight: 20 },
   durationDisplay: {
     backgroundColor: '#f0f4ff',
     borderRadius: 12,
@@ -568,153 +580,29 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#5170ff',
   },
-  durationDisplayLabel: {
-    fontSize: 12,
-    color: '#5170ff',
-    fontWeight: '600',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  durationDisplayValue: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#5170ff',
-    fontVariant: ['tabular-nums'],
-  },
-  durationDisplayEdit: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 4,
-  },
-  statusBox: {
-    borderWidth: 2,
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 28,
-    minHeight: 90,
-    justifyContent: 'center',
-  },
-  statusLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  countdown: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    marginTop: 8,
-    fontVariant: ['tabular-nums'],
-  },
-  startButton: {
-    backgroundColor: '#5170ff',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  startButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  activeControls: {
-    gap: 12,
-  },
-  responsePrompt: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  okayButton: {
-    backgroundColor: '#2e7d32',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  okayForNowButton: {
-    backgroundColor: '#5170ff',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  helpButton: {
-    backgroundColor: '#c62828',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  actionButtonSub: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 12,
-    marginTop: 3,
-  },
-  cancelButton: {
-    borderWidth: 2,
-    borderColor: '#aaa',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#aaa',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalSheet: {
-    backgroundColor: '#1c1c1e',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 40,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(255,255,255,0.15)',
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  modalCancel: {
-    fontSize: 17,
-    color: 'rgba(255,255,255,0.6)',
-  },
-  modalDone: {
-    fontSize: 17,
-    color: '#5170ff',
-    fontWeight: '600',
-  },
-  pickerContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    position: 'relative',
-  },
-  selectionHighlight: {
-    position: 'absolute',
-    left: 24,
-    right: 24,
-    top: 16 + ITEM_HEIGHT * 2,
-    height: ITEM_HEIGHT,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 10,
-  },
+  durationDisplayLabel: { fontSize: 12, color: '#5170ff', fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  durationDisplayValue: { fontSize: 36, fontWeight: 'bold', color: '#5170ff', fontVariant: ['tabular-nums'] },
+  durationDisplayEdit: { fontSize: 12, color: '#888', marginTop: 4 },
+  statusBox: { borderWidth: 2, borderRadius: 12, padding: 20, alignItems: 'center', marginBottom: 28, minHeight: 90, justifyContent: 'center' },
+  statusLabel: { fontSize: 18, fontWeight: '600' },
+  countdown: { fontSize: 36, fontWeight: 'bold', marginTop: 8, fontVariant: ['tabular-nums'] },
+  startButton: { backgroundColor: '#5170ff', padding: 16, borderRadius: 10, alignItems: 'center', marginBottom: 12 },
+  startButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  activeControls: { gap: 12 },
+  responsePrompt: { fontSize: 18, fontWeight: '600', color: '#333', textAlign: 'center', marginBottom: 4 },
+  okayButton: { backgroundColor: '#2e7d32', padding: 16, borderRadius: 10, alignItems: 'center' },
+  okayForNowButton: { backgroundColor: '#5170ff', padding: 16, borderRadius: 10, alignItems: 'center' },
+  helpButton: { backgroundColor: '#c62828', padding: 16, borderRadius: 10, alignItems: 'center' },
+  actionButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  actionButtonSub: { color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 3 },
+  cancelButton: { borderWidth: 2, borderColor: '#aaa', padding: 16, borderRadius: 10, alignItems: 'center' },
+  cancelButtonText: { color: '#aaa', fontSize: 16, fontWeight: '600' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalSheet: { backgroundColor: '#1c1c1e', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 40 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.15)' },
+  modalTitle: { fontSize: 17, fontWeight: '600', color: '#fff' },
+  modalCancel: { fontSize: 17, color: 'rgba(255,255,255,0.6)' },
+  modalDone: { fontSize: 17, color: '#5170ff', fontWeight: '600' },
+  pickerContainer: { flexDirection: 'row', paddingHorizontal: 24, paddingVertical: 16, position: 'relative' },
+  selectionHighlight: { position: 'absolute', left: 24, right: 24, top: 16 + ITEM_HEIGHT * 2, height: ITEM_HEIGHT, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 },
 });
