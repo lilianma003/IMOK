@@ -20,6 +20,7 @@ import Register from './screens/register';
 import { registerFCMToken } from './src/services/notificationService';
 import RegisterSuccess from './screens/register_success';
 import { useTranslation } from 'react-i18next';
+import { refreshContactStatuses } from './src/services/contactService';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
