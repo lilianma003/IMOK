@@ -4,6 +4,7 @@ import {
   StyleSheet, Pressable
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 
 type AuthStackParamList = {
   Welcome: undefined;
@@ -19,13 +20,14 @@ interface Props {
 }
 
 export default function RegisterSuccess({ navigation }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [hovered, setHovered] = useState<boolean>(false);
 
   return (
     <View style={styles.container}>
       <Text style={styles.checkmark}>✓</Text>
-      <Text style={styles.title}>Registration Successful!</Text>
-      <Text style={styles.subtitle}>Your account has been created.</Text>
+      <Text style={styles.title}>{t('registerSuccess.title')}</Text>
+      <Text style={styles.subtitle}>{t('registerSuccess.subtitle')}</Text>
 
       <Pressable
         onPressIn={() => setHovered(true)}
@@ -40,7 +42,7 @@ export default function RegisterSuccess({ navigation }: Props): React.JSX.Elemen
           styles.buttonText,
           hovered ? styles.buttonTextOutline : styles.buttonTextSolid
         ]}>
-          Continue to Login
+          {t('registerSuccess.continueButton')}
         </Text>
       </Pressable>
     </View>
@@ -57,13 +59,13 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     fontSize: 64,
-    color: '#1565c0',
+    color: '#38b6ff',
     marginBottom: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1565c0',
+    color: '#5170ff',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -81,12 +83,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   buttonSolid: {
-    backgroundColor: '#1565c0',
-    borderColor: '#1565c0',
+    backgroundColor: '#5170ff',
+    borderColor: '#5170ff',
   },
   buttonOutline: {
     backgroundColor: '#fff',
-    borderColor: '#1565c0',
+    borderColor: '#5170ff',
   },
   buttonText: {
     fontSize: 16,
@@ -96,6 +98,6 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   buttonTextOutline: {
-    color: '#1565c0',
+    color: '#5170ff',
   },
 });

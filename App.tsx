@@ -19,6 +19,7 @@ import Login from './screens/login';
 import Register from './screens/register';
 import { registerFCMToken } from './src/services/notificationService';
 import RegisterSuccess from './screens/register_success';
+import { useTranslation } from 'react-i18next';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -48,6 +49,8 @@ function WelcomeScreen({ navigation }: any) {
 
 // ── Main app tabs (only shown when logged in) ─────────────────────
 function MainTabs() {
+  const { t } = useTranslation();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -68,10 +71,10 @@ function MainTabs() {
         tabBarInactiveTintColor: 'gray',
       })}
     >
-      <Tab.Screen name="Home" component={CheckinTimer} />
-      <Tab.Screen name="Contacts" component={MyContacts} />
-      <Tab.Screen name="Profile" component={UserProfile} />
-      <Tab.Screen name="Resources" component={Resources} />
+      <Tab.Screen name="Home" component={CheckinTimer} options={{ tabBarLabel: t('tabs.home') }} />
+      <Tab.Screen name="Contacts" component={MyContacts} options={{ tabBarLabel: t('tabs.contacts') }} />
+      <Tab.Screen name="Profile" component={UserProfile} options={{ tabBarLabel: t('tabs.profile') }} />
+      <Tab.Screen name="Resources" component={Resources} options={{ tabBarLabel: t('tabs.resources') }} />
     </Tab.Navigator>
   );
 }

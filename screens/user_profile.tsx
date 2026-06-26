@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Alert, ActivityIndicator, Platform
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { db, auth } from '../src/config/firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
 
@@ -16,6 +25,8 @@ interface EmergencyProfile {
 }
 
 export default function UserProfile() {
+  const { t } = useTranslation();
+
   const [profile, setProfile] = useState<EmergencyProfile>({
     name: '',
     nationality: '',
@@ -35,7 +46,7 @@ export default function UserProfile() {
   const handleSave = async () => {
     const user = auth.currentUser;
     if (!user) {
-      Alert.alert('Not logged in', 'Please log in to save your profile.');
+      Alert.alert(t('profile.notLoggedInTitle'), t('profile.notLoggedInMessage'));
       return;
     }
     try {
@@ -43,77 +54,89 @@ export default function UserProfile() {
       await setDoc(doc(db, 'users', user.uid), { emergencyProfile: profile }, { merge: true });
       setSaved(true);
     } catch (error) {
-      Alert.alert('Error', 'Could not save profile. Please try again.');
+      Alert.alert(t('profile.errorTitle'), t('profile.errorMessage'));
     } finally {
       setSaving(false);
     }
   };
 
-  return (
-    <KeyboardAvoidingView contentContainerStyle={styles.container}>
-      <Text style={styles.heading}>Emergency Profile</Text>
+return (
+  
+  <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    keyboardVerticalOffset={20}
+  >
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+    >
+    <LanguageToggle />
+      <Text style={styles.heading}>{t('profile.heading')}</Text>
+
       <Text style={styles.subheading}>
-        This information will be shared with your emergency contacts if you trigger SOS.
+        {t('profile.subheading')}
       </Text>
 
-      <Field label="Full Name" placeholder="Your legal name">
+      <Field label={t('profile.fullName')}>
         <TextInput
           style={styles.input}
           value={profile.name}
           onChangeText={v => handleChange('name', v)}
-          placeholder="Your legal name"
+          placeholder={t('profile.fullNamePlaceholder')}
           placeholderTextColor="#aaa"
         />
       </Field>
 
-      <Field label="Nationality" placeholder="e.g. Chinese, Mexican">
+      <Field label={t('profile.nationality')}>
         <TextInput
           style={styles.input}
           value={profile.nationality}
           onChangeText={v => handleChange('nationality', v)}
-          placeholder="e.g. Chinese, Mexican"
+          placeholder={t('profile.nationalityPlaceholder')}
           placeholderTextColor="#aaa"
         />
       </Field>
 
-      <Field label="Languages Spoken" placeholder="e.g. Mandarin, Spanish, English">
+      <Field label={t('profile.languages')}>
         <TextInput
           style={styles.input}
           value={profile.languages}
           onChangeText={v => handleChange('languages', v)}
-          placeholder="e.g. Mandarin, Spanish, English"
+          placeholder={t('profile.languagesPlaceholder')}
           placeholderTextColor="#aaa"
         />
       </Field>
 
-      <Field label="Medical Information" placeholder="Allergies, conditions, medications">
+      <Field label={t('profile.medicalInfo')}>
         <TextInput
           style={[styles.input, styles.multiline]}
           value={profile.medicalInfo}
           onChangeText={v => handleChange('medicalInfo', v)}
-          placeholder="Allergies, conditions, medications"
+          placeholder={t('profile.medicalInfoPlaceholder')}
           placeholderTextColor="#aaa"
           multiline
           numberOfLines={3}
         />
       </Field>
 
-      <Field label="Attorney Contact" placeholder="Name and phone number">
+      <Field label={t('profile.attorneyContact')}>
         <TextInput
           style={styles.input}
           value={profile.attorneyContact}
           onChangeText={v => handleChange('attorneyContact', v)}
-          placeholder="Name and phone number"
+          placeholder={t('profile.attorneyContactPlaceholder')}
           placeholderTextColor="#aaa"
         />
       </Field>
 
-      <Field label="ICE Case Number" placeholder="Leave blank if unknown">
+      <Field label={t('profile.iceCaseNumber')}>
         <TextInput
           style={styles.input}
           value={profile.iceCaseNumber}
           onChangeText={v => handleChange('iceCaseNumber', v)}
-          placeholder="Leave blank if unknown"
+          placeholder={t('profile.iceCaseNumberPlaceholder')}
           placeholderTextColor="#aaa"
         />
       </Field>
@@ -123,16 +146,20 @@ export default function UserProfile() {
         onPress={handleSave}
         disabled={saving}
       >
-        {saving
-          ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.buttonText}>{saved ? '✓ Saved' : 'Save Profile'}</Text>
-        }
+        {saving ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>
+            {saved ? t('profile.saved') : t('profile.saveButton')}
+          </Text>
+        )}
       </TouchableOpacity>
-    </KeyboardAvoidingView>
-  );
+    </ScrollView>
+  </KeyboardAvoidingView>
+);
 }
 
-function Field({ label, children }: { label: string; placeholder?: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -140,17 +167,66 @@ function Field({ label, children }: { label: string; placeholder?: string; child
     </View>
   );
 }
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const LANGUAGE_KEY = 'user_language';
+
+function LanguageToggle() {
+  const { i18n } = useTranslation();
+  const isZh = i18n.language === 'zh';
+
+  const toggleLanguage = async () => {
+    const newLang = isZh ? 'en' : 'zh';
+    i18n.changeLanguage(newLang);
+    await AsyncStorage.setItem(LANGUAGE_KEY, newLang);
+  };
+
+  return (
+    <TouchableOpacity onPress={toggleLanguage} style={toggleStyles.toggle}>
+      <Text style={[toggleStyles.option, !isZh && toggleStyles.active]}>EN</Text>
+      <Text style={toggleStyles.divider}>|</Text>
+      <Text style={[toggleStyles.option, isZh && toggleStyles.active]}>中文</Text>
+    </TouchableOpacity>
+  );
+}
+
+const toggleStyles = StyleSheet.create({
+  toggle: {
+    flexDirection: 'row',
+    alignSelf: 'flex-end',
+    alignItems: 'center',
+    backgroundColor: '#f0f4ff',
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  option: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#aaa',
+  },
+  active: {
+    color: '#38b6ff',
+  },
+  divider: {
+    marginHorizontal: 6,
+    color: '#ccc',
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
-    padding: 24,
-    paddingBottom: 48,
-    backgroundColor: '#fff',
-  },
+  flexGrow: 1,
+  backgroundColor: '#fff',
+  paddingHorizontal: 24,
+  paddingTop: 20,
+  paddingBottom: 48,
+},
   heading: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#1565c0',
+    color: '#5170ff',
     marginBottom: 8,
     marginTop: 16,
   },
@@ -185,11 +261,12 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   button: {
-    backgroundColor: '#1565c0',
+    backgroundColor: '#5170ff',
     padding: 14,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 12,
+    marginBottom: 24,
   },
   buttonSaved: {
     backgroundColor: '#2e7d32',

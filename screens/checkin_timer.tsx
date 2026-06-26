@@ -4,6 +4,7 @@ import {
   Alert, ScrollView, AppState, AppStateStatus,
   Modal, FlatList, Animated, Dimensions
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import * as Notifications from 'expo-notifications';
 import { auth } from '../src/config/firebaseConfig';
 import {
@@ -151,6 +152,8 @@ const pickerStyles = StyleSheet.create({
 });
 
 export default function CheckinTimer(): React.JSX.Element {
+  const { t } = useTranslation();
+
   const [state, setState] = useState<CheckinState>({
     isActive: false,
     endTime: null,
@@ -222,9 +225,9 @@ export default function CheckinTimer(): React.JSX.Element {
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
     const s = totalSeconds % 60;
-    if (h > 0) return `${h}h ${m}m ${s}s`;
-    if (m > 0) return `${m}m ${s}s`;
-    return `${s}s`;
+    if (h > 0) return `${h}${t('checkin.unitH')} ${m}${t('checkin.unitM')} ${s}${t('checkin.unitS')}`;
+    if (m > 0) return `${m}${t('checkin.unitM')} ${s}${t('checkin.unitS')}`;
+    return `${s}${t('checkin.unitS')}`;
   };
 
   const updateCountdownDisplay = useCallback((): void => {
@@ -232,10 +235,10 @@ export default function CheckinTimer(): React.JSX.Element {
       const now = Date.now();
       if (current.status === 'running' && current.endTime) {
         const diff = current.endTime - now;
-        setTimeRemaining(diff > 0 ? formatMs(diff) : 'Awaiting your response...');
+        setTimeRemaining(diff > 0 ? formatMs(diff) : t('checkin.awaitingResponse'));
       } else if (current.status === 'grace' && current.gracePeriodEnd) {
         const diff = current.gracePeriodEnd - now;
-        setTimeRemaining(diff > 0 ? `Grace period: ${formatMs(diff)}` : 'Alerting contacts...');
+        setTimeRemaining(diff > 0 ? `${t('checkin.gracePeriodPrefix')}${formatMs(diff)}` : t('checkin.alertingContacts'));
       }
       return current;
     });
@@ -273,16 +276,16 @@ export default function CheckinTimer(): React.JSX.Element {
   const startTimer = async (): Promise<void> => {
     const durationSeconds = pickerHours * 3600 + pickerMinutes * 60 + pickerSeconds;
     if (durationSeconds === 0) {
-      Alert.alert('Invalid duration', 'Please set a duration greater than 0.');
+      Alert.alert(t('checkin.invalidDurationTitle'), t('checkin.invalidDurationMessage'));
       return;
     }
     await runTimer(durationSeconds);
-    const h = pickerHours > 0 ? `${pickerHours}h ` : '';
-    const m = pickerMinutes > 0 ? `${pickerMinutes}m ` : '';
-    const s = pickerSeconds > 0 ? `${pickerSeconds}s` : '';
+    const h = pickerHours > 0 ? `${pickerHours}${t('checkin.unitH')} ` : '';
+    const m = pickerMinutes > 0 ? `${pickerMinutes}${t('checkin.unitM')} ` : '';
+    const s = pickerSeconds > 0 ? `${pickerSeconds}${t('checkin.unitS')}` : '';
     Alert.alert(
-      'Timer started',
-      `Check-in in ${h}${m}${s}. If you don't respond within 15 minutes after that, your emergency contacts will be alerted.`
+      t('checkin.timerStartedTitle'),
+      t('checkin.timerStartedMessage', { duration: `${h}${m}${s}` })
     );
   };
 
@@ -312,35 +315,35 @@ export default function CheckinTimer(): React.JSX.Element {
       .filter(c => c.status === 'linked' && c.fcmToken)
       .map(c => c.fcmToken as string);
     if (tokens.length === 0) {
-      Alert.alert('No linked contacts', 'None of your emergency contacts have the IMOK app installed.');
+      Alert.alert(t('checkin.noLinkedContactsTitle'), t('checkin.noLinkedContactsMessage'));
       return;
     }
-    await sendEmergencyPush(tokens, userDoc?.name ?? 'Someone', location?.mapsUrl ?? null);
+    await sendEmergencyPush(tokens, userDoc?.name ?? t('checkin.someoneDefaultName'), location?.mapsUrl ?? null);
     const triggered: CheckinState = { ...state, status: 'triggered' };
     await saveCheckinState(triggered);
     setState(triggered);
     await cancelAllCheckinNotifications();
-    await sendImmediateNotification('Alert sent', 'Your emergency contacts have been notified.', 'alert_sent');
+    await sendImmediateNotification(t('checkin.alertSentTitle'), t('checkin.alertSentMessage'), 'alert_sent');
   };
 
   const handleUserOkay = async (): Promise<void> => {
     await stopTimer();
-    Alert.alert("Glad you're okay!", 'Timer has been reset.');
+    Alert.alert(t('checkin.gladOkayTitle'), t('checkin.gladOkayMessage'));
   };
 
   const handleOkayForNow = async (): Promise<void> => {
     const duration = state.durationSeconds ?? (pickerHours * 3600 + pickerMinutes * 60 + pickerSeconds);
     await runTimer(duration);
-    Alert.alert('Timer restarted', `Check-in timer restarted for ${formatMs(duration * 1000)}.`);
+    Alert.alert(t('checkin.timerRestartedTitle'), t('checkin.timerRestartedMessage', { duration: formatMs(duration * 1000) }));
   };
 
   const handleSendAlert = async (): Promise<void> => {
     Alert.alert(
-      'Send emergency alert?',
-      'This will notify your emergency contacts with your current location.',
+      t('checkin.sendAlertConfirmTitle'),
+      t('checkin.sendAlertConfirmMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Send Alert', style: 'destructive', onPress: triggerEmergencyAlert },
+        { text: t('checkin.modalCancel'), style: 'cancel' },
+        { text: t('checkin.sendAlertConfirmButton'), style: 'destructive', onPress: triggerEmergencyAlert },
       ]
     );
   };
@@ -356,10 +359,10 @@ export default function CheckinTimer(): React.JSX.Element {
 
   const statusLabel = (): string => {
     switch (state.status) {
-      case 'running': return 'Timer running';
-      case 'grace': return 'Awaiting response';
-      case 'triggered': return 'Alert triggered';
-      default: return 'No active timer';
+      case 'running': return t('checkin.statusRunning');
+      case 'grace': return t('checkin.statusGrace');
+      case 'triggered': return t('checkin.statusTriggered');
+      default: return t('checkin.statusIdle');
     }
   };
 
@@ -369,10 +372,10 @@ export default function CheckinTimer(): React.JSX.Element {
 
   const selectedDurationLabel = (): string => {
     const parts = [];
-    if (pickerHours > 0) parts.push(`${pickerHours}h`);
-    if (pickerMinutes > 0) parts.push(`${pickerMinutes}m`);
-    if (pickerSeconds > 0) parts.push(`${pickerSeconds}s`);
-    return parts.length > 0 ? parts.join(' ') : '0s';
+    if (pickerHours > 0) parts.push(`${pickerHours}${t('checkin.unitH')}`);
+    if (pickerMinutes > 0) parts.push(`${pickerMinutes}${t('checkin.unitM')}`);
+    if (pickerSeconds > 0) parts.push(`${pickerSeconds}${t('checkin.unitS')}`);
+    return parts.length > 0 ? parts.join(' ') : `0${t('checkin.unitS')}`;
   };
 
   return (
@@ -380,7 +383,7 @@ export default function CheckinTimer(): React.JSX.Element {
       <ScrollView contentContainerStyle={styles.container}>
         {/* Header row with settings button */}
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Check-in Timer</Text>
+          <Text style={styles.title}>{t('checkin.title')}</Text>
           <TouchableOpacity
             style={styles.settingsButton}
             onPress={() => setSettingsVisible(true)}
@@ -393,7 +396,7 @@ export default function CheckinTimer(): React.JSX.Element {
         </View>
 
         <Text style={styles.subtitle}>
-          Set a timer. If you don't respond when it ends, your emergency contacts will be alerted.
+          {t('checkin.subtitle')}
         </Text>
 
         {/* Selected duration display when idle */}
@@ -402,9 +405,9 @@ export default function CheckinTimer(): React.JSX.Element {
             style={styles.durationDisplay}
             onPress={() => setSettingsVisible(true)}
           >
-            <Text style={styles.durationDisplayLabel}>Duration</Text>
+            <Text style={styles.durationDisplayLabel}>{t('checkin.durationLabel')}</Text>
             <Text style={styles.durationDisplayValue}>{selectedDurationLabel()}</Text>
-            <Text style={styles.durationDisplayEdit}>Tap to change</Text>
+            <Text style={styles.durationDisplayEdit}>{t('checkin.tapToChange')}</Text>
           </TouchableOpacity>
         )}
 
@@ -423,7 +426,7 @@ export default function CheckinTimer(): React.JSX.Element {
         {/* Start button — idle only */}
         {!state.isActive && (
           <TouchableOpacity style={styles.startButton} onPress={startTimer}>
-            <Text style={styles.startButtonText}>Start check-in timer</Text>
+            <Text style={styles.startButtonText}>{t('checkin.startButton')}</Text>
           </TouchableOpacity>
         )}
 
@@ -432,36 +435,36 @@ export default function CheckinTimer(): React.JSX.Element {
           <View style={styles.activeControls}>
             {(state.status === 'grace' || isAwaitingResponse()) && (
               <>
-                <Text style={styles.responsePrompt}>How are you doing?</Text>
+                <Text style={styles.responsePrompt}>{t('checkin.howAreYou')}</Text>
                 <TouchableOpacity style={styles.okayButton} onPress={handleUserOkay}>
-                  <Text style={styles.actionButtonText}>I'm okay</Text>
-                  <Text style={styles.actionButtonSub}>Stop the timer</Text>
+                  <Text style={styles.actionButtonText}>{t('checkin.imOkay')}</Text>
+                  <Text style={styles.actionButtonSub}>{t('checkin.stopTimer')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.okayForNowButton} onPress={handleOkayForNow}>
-                  <Text style={styles.actionButtonText}>I'm okay for now</Text>
-                  <Text style={styles.actionButtonSub}>Repeat timer for same duration</Text>
+                  <Text style={styles.actionButtonText}>{t('checkin.imOkayForNow')}</Text>
+                  <Text style={styles.actionButtonSub}>{t('checkin.repeatTimer')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.helpButton} onPress={handleSendAlert}>
-                  <Text style={styles.actionButtonText}>Send alert</Text>
-                  <Text style={styles.actionButtonSub}>Notify emergency contacts now</Text>
+                  <Text style={styles.actionButtonText}>{t('checkin.sendAlert')}</Text>
+                  <Text style={styles.actionButtonSub}>{t('checkin.notifyNow')}</Text>
                 </TouchableOpacity>
               </>
             )}
             {state.status === 'running' && !isAwaitingResponse() && (
               <>
                 <TouchableOpacity style={styles.okayButton} onPress={handleUserOkay}>
-                  <Text style={styles.actionButtonText}>I'm okay</Text>
-                  <Text style={styles.actionButtonSub}>Stop the timer early</Text>
+                  <Text style={styles.actionButtonText}>{t('checkin.imOkay')}</Text>
+                  <Text style={styles.actionButtonSub}>{t('checkin.stopTimerEarly')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.helpButton} onPress={handleSendAlert}>
-                  <Text style={styles.actionButtonText}>Send alert now</Text>
-                  <Text style={styles.actionButtonSub}>Notify emergency contacts immediately</Text>
+                  <Text style={styles.actionButtonText}>{t('checkin.sendAlertNow')}</Text>
+                  <Text style={styles.actionButtonSub}>{t('checkin.notifyImmediately')}</Text>
                 </TouchableOpacity>
               </>
             )}
             <TouchableOpacity style={styles.cancelButton} onPress={stopTimer}>
               <Text style={styles.cancelButtonText}>
-                {state.status === 'triggered' ? 'Reset timer' : 'Cancel timer'}
+                {state.status === 'triggered' ? t('checkin.resetTimer') : t('checkin.cancelTimer')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -486,11 +489,11 @@ export default function CheckinTimer(): React.JSX.Element {
           {/* Modal header */}
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setSettingsVisible(false)}>
-              <Text style={styles.modalCancel}>Cancel</Text>
+              <Text style={styles.modalCancel}>{t('checkin.modalCancel')}</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Set Duration</Text>
+            <Text style={styles.modalTitle}>{t('checkin.modalTitle')}</Text>
             <TouchableOpacity onPress={() => setSettingsVisible(false)}>
-              <Text style={styles.modalDone}>Done</Text>
+              <Text style={styles.modalDone}>{t('checkin.modalDone')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -503,19 +506,19 @@ export default function CheckinTimer(): React.JSX.Element {
               data={HOURS}
               selectedIndex={pickerHours}
               onChange={setPickerHours}
-              label="hours"
+              label={t('checkin.hours')}
             />
             <WheelPicker
               data={MINUTES}
               selectedIndex={pickerMinutes}
               onChange={setPickerMinutes}
-              label="min"
+              label={t('checkin.min')}
             />
             <WheelPicker
               data={SECONDS}
               selectedIndex={pickerSeconds}
               onChange={setPickerSeconds}
-              label="sec"
+              label={t('checkin.sec')}
             />
           </View>
         </View>
@@ -539,7 +542,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#1565c0',
+    color: '#5170ff',
   },
   settingsButton: {
     padding: 6,
@@ -563,11 +566,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     borderWidth: 1.5,
-    borderColor: '#1565c0',
+    borderColor: '#5170ff',
   },
   durationDisplayLabel: {
     fontSize: 12,
-    color: '#1565c0',
+    color: '#5170ff',
     fontWeight: '600',
     marginBottom: 4,
     textTransform: 'uppercase',
@@ -576,7 +579,7 @@ const styles = StyleSheet.create({
   durationDisplayValue: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#1565c0',
+    color: '#5170ff',
     fontVariant: ['tabular-nums'],
   },
   durationDisplayEdit: {
@@ -604,7 +607,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   startButton: {
-    backgroundColor: '#1565c0',
+    backgroundColor: '#5170ff',
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',
@@ -632,7 +635,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   okayForNowButton: {
-    backgroundColor: '#1565c0',
+    backgroundColor: '#5170ff',
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',
@@ -696,7 +699,7 @@ const styles = StyleSheet.create({
   },
   modalDone: {
     fontSize: 17,
-    color: '#0a84ff',
+    color: '#5170ff',
     fontWeight: '600',
   },
   pickerContainer: {

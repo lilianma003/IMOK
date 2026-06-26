@@ -16,7 +16,8 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+     "channel": "production"
     },
     "development-simulator": {
       "developmentClient": true,

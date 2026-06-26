@@ -4,6 +4,7 @@ import {
   StyleSheet, Linking, ActivityIndicator, Alert,
   Animated, TouchableWithoutFeedback, Dimensions, Platform
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { auth } from '../src/config/firebaseConfig';
 import {
   getContacts, addContact as addContactToFirebase,
@@ -13,10 +14,9 @@ import {
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SHEET_HEIGHT = 280;
 
-const INVITE_MESSAGE =
-  `Hey! I'm using IMOK, a personal safety app that lets trusted contacts know if I need help. Download it here: https://play.google.com/store/apps/details?id=com.lilianma003.imOK`;
-
 export default function MyContacts(): React.JSX.Element {
+  const { t } = useTranslation();
+
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [name, setName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
@@ -30,6 +30,11 @@ export default function MyContacts(): React.JSX.Element {
 
   const userId = auth.currentUser?.uid;
 
+  const getInviteMessage = (): string =>
+    t('contacts.inviteMessage', {
+      url: 'https://play.google.com/store/apps/details?id=com.lilianma003.imOK',
+    });
+
   useEffect(() => {
     const load = async () => {
       if (!userId) return;
@@ -37,7 +42,7 @@ export default function MyContacts(): React.JSX.Element {
         const data = await getContacts(userId);
         setContacts(data);
       } catch {
-        Alert.alert('Error', 'Failed to load contacts');
+        Alert.alert(t('contacts.errorLoadTitle'), t('contacts.errorLoadMessage'));
       } finally {
         setLoading(false);
       }
@@ -79,16 +84,17 @@ export default function MyContacts(): React.JSX.Element {
 
   const handleInvitePhone = () => {
     closeSheet();
+    const message = getInviteMessage();
     const smsUrl = Platform.OS === 'ios'
-      ? `sms:&body=${encodeURIComponent(INVITE_MESSAGE)}`
-      : `sms:?body=${encodeURIComponent(INVITE_MESSAGE)}`;
+      ? `sms:&body=${encodeURIComponent(message)}`
+      : `sms:?body=${encodeURIComponent(message)}`;
     Linking.openURL(smsUrl);
   };
 
   const handleInviteEmail = () => {
     closeSheet();
-    const subject = encodeURIComponent('Join me on IMOK');
-    const body = encodeURIComponent(INVITE_MESSAGE);
+    const subject = encodeURIComponent(t('contacts.inviteEmailSubject'));
+    const body = encodeURIComponent(getInviteMessage());
     Linking.openURL(`mailto:?subject=${subject}&body=${body}`);
   };
 
@@ -108,7 +114,7 @@ export default function MyContacts(): React.JSX.Element {
       setPhone('');
       setEmail('');
     } catch {
-      Alert.alert('Error', 'Failed to add contact');
+      Alert.alert(t('contacts.errorAddTitle'), t('contacts.errorAddMessage'));
     } finally {
       setSaving(false);
     }
@@ -120,7 +126,7 @@ export default function MyContacts(): React.JSX.Element {
       await deleteContactFromFirebase(userId, contactId);
       setContacts(prev => prev.filter(c => c.id !== contactId));
     } catch {
-      Alert.alert('Error', 'Failed to delete contact');
+      Alert.alert(t('contacts.errorDeleteTitle'), t('contacts.errorDeleteMessage'));
     }
   };
 
@@ -141,14 +147,14 @@ export default function MyContacts(): React.JSX.Element {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View>
-            <Text style={styles.title}>Emergency Contacts</Text>
-            <TextInput style={styles.input} placeholder="Name" value={name} onChangeText={setName} />
-            <TextInput style={styles.input} placeholder="Phone number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-            <TextInput style={styles.input} placeholder="Email (must have IMOK app)" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+            <Text style={styles.title}>{t('contacts.title')}</Text>
+            <TextInput style={styles.input} placeholder={t('contacts.namePlaceholder')} value={name} onChangeText={setName} />
+            <TextInput style={styles.input} placeholder={t('contacts.phonePlaceholder')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+            <TextInput style={styles.input} placeholder={t('contacts.emailPlaceholder')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
             <TouchableOpacity style={styles.addButton} onPress={handleAddContact} disabled={saving}>
               {saving
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.addButtonText}>Add Contact</Text>
+                : <Text style={styles.addButtonText}>{t('contacts.addButton')}</Text>
               }
             </TouchableOpacity>
           </View>
@@ -159,31 +165,31 @@ export default function MyContacts(): React.JSX.Element {
               <Text style={styles.contactName}>{item.name}</Text>
               <Text style={styles.contactPhone}>{item.phone}</Text>
               <Text style={item.status === 'linked' ? styles.linked : styles.notLinked}>
-                {item.status === 'linked' ? 'Has IMOK app' : 'Not on IMOK'}
+                {item.status === 'linked' ? t('contacts.hasApp') : t('contacts.notOnApp')}
               </Text>
             </View>
             <View style={styles.actions}>
               <TouchableOpacity onPress={() => Linking.openURL(`tel:${item.phone}`)}>
-                <Text style={styles.actionCall}>Call</Text>
+                <Text style={styles.actionCall}>{t('contacts.call')}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => Linking.openURL(`sms:${item.phone}`)}>
-                <Text style={styles.actionText}>Text</Text>
+                <Text style={styles.actionText}>{t('contacts.text')}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => handleDelete(item.id)}>
-                <Text style={styles.actionDelete}>Delete</Text>
+                <Text style={styles.actionDelete}>{t('contacts.delete')}</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
         ListEmptyComponent={
-          <Text style={styles.empty}>No contacts yet. Add one above.</Text>
+          <Text style={styles.empty}>{t('contacts.empty')}</Text>
         }
       />
 
       {/* Fixed bottom bar with invite button */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.inviteButton} onPress={openSheet}>
-          <Text style={styles.inviteButtonText}>+ Invite Contact</Text>
+          <Text style={styles.inviteButtonText}>{t('contacts.invite')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -207,7 +213,7 @@ export default function MyContacts(): React.JSX.Element {
           >
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>
-              Choose a method below to invite trusted contacts to the app
+              {t('contacts.sheetTitle')}
             </Text>
 
             <TouchableOpacity style={styles.methodButton} onPress={handleInvitePhone}>
@@ -215,8 +221,8 @@ export default function MyContacts(): React.JSX.Element {
                 <Text style={{ fontSize: 20 }}>💬</Text>
               </View>
               <View>
-                <Text style={styles.methodLabel}>Send via messages</Text>
-                <Text style={styles.methodSub}>Opens your messages app</Text>
+                <Text style={styles.methodLabel}>{t('contacts.sendViaMessages')}</Text>
+                <Text style={styles.methodSub}>{t('contacts.sendViaMessagesSub')}</Text>
               </View>
             </TouchableOpacity>
 
@@ -225,8 +231,8 @@ export default function MyContacts(): React.JSX.Element {
                 <Text style={{ fontSize: 20 }}>✉️</Text>
               </View>
               <View>
-                <Text style={styles.methodLabel}>Send via email</Text>
-                <Text style={styles.methodSub}>Opens your email app</Text>
+                <Text style={styles.methodLabel}>{t('contacts.sendViaEmail')}</Text>
+                <Text style={styles.methodSub}>{t('contacts.sendViaEmailSub')}</Text>
               </View>
             </TouchableOpacity>
           </Animated.View>
@@ -264,7 +270,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   addButton: {
-    backgroundColor: '#458cff',
+    backgroundColor: '#5170ff',
     padding: 14,
     borderRadius: 8,
     alignItems: 'center',
@@ -320,11 +326,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionCall: {
-    color: '#458cff',
+    color: '#38b6ff',
     fontWeight: '600',
   },
   actionText: {
-    color: '#1565c0',
+    color: '#5170ff',
     fontWeight: '600',
   },
   actionDelete: {
@@ -349,7 +355,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   inviteButton: {
-    backgroundColor: '#1565c0',
+    backgroundColor: '#5170ff',
     paddingVertical: 12,
     paddingHorizontal: 36,
     borderRadius: 24,

@@ -9,34 +9,23 @@ import {
 import { useTranslation } from 'react-i18next';
 
 export default function Resources() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState<number | null>(null);
 
   const toggle = (index: number) => {
     setExpanded(expanded === index ? null : index);
   };
 
-  const toggleLanguage = () => {
-    const next = i18n.language === 'en' ? 'zh' : 'en';
-    i18n.changeLanguage(next);
-    setExpanded(null); // collapse sections on language switch
-  };
-
-const rawSections = t('resources.sections', { returnObjects: true });
-const sections = Array.isArray(rawSections) ? rawSections as {
-  title: string;
-  content: string[];
-}[] : [];
+  const rawSections = t('resources.sections', { returnObjects: true });
+  const sections = Array.isArray(rawSections) ? rawSections as {
+    title: string;
+    content: string[];
+  }[] : [];
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.header}>{t('resources.title')}</Text>
-        <TouchableOpacity style={styles.langButton} onPress={toggleLanguage}>
-          <Text style={styles.langButtonText}>
-            {i18n.language === 'en' ? '中文' : 'EN'}
-          </Text>
-        </TouchableOpacity>
       </View>
 
       <Text style={styles.subheader}>{t('resources.subheader')}</Text>
@@ -73,17 +62,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   header: { fontSize: 26, fontWeight: 'bold', color: '#1a1a1a' },
-  langButton: {
-    backgroundColor: '#1565c0',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  langButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
   subheader: { fontSize: 14, color: '#555', marginBottom: 20 },
   card: {
     backgroundColor: '#fff',

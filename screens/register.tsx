@@ -4,6 +4,7 @@ import {
   StyleSheet, Alert, ActivityIndicator, ScrollView
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { registerWithEmail } from '../src/services/authService';
 import { createUserDocument } from '../src/services/userService';
 import { createLocationDocument } from '../src/services/locationService';
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export default function Register({ navigation }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
@@ -30,17 +32,33 @@ export default function Register({ navigation }: Props): React.JSX.Element {
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
+  const getAuthErrorMessage = (error: Error): string => {
+    const code = (error as any)?.code as string | undefined;
+    switch (code) {
+      case 'auth/email-already-in-use':
+        return t('auth.errorEmailInUse');
+      case 'auth/invalid-email':
+        return t('auth.errorInvalidEmail');
+      case 'auth/weak-password':
+        return t('auth.errorWeakPassword');
+      case 'auth/network-request-failed':
+        return t('auth.errorNetwork');
+      default:
+        return t('auth.errorGeneric');
+    }
+  };
+
   const handleRegister = async (): Promise<void> => {
     if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert(t('auth.errorTitle'), t('auth.fillRequiredFields'));
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert(t('auth.errorTitle'), t('auth.passwordMismatch'));
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert(t('auth.errorTitle'), t('auth.passwordTooShort'));
       return;
     }
     try {
@@ -55,7 +73,7 @@ export default function Register({ navigation }: Props): React.JSX.Element {
       await auth.signOut();
       navigation.navigate('RegisterSuccess');
     } catch (error) {
-      Alert.alert('Registration Failed', (error as Error).message);
+      Alert.alert(t('auth.registrationFailedTitle'), getAuthErrorMessage(error as Error));
     } finally {
       setLoading(false);
     }
@@ -64,21 +82,21 @@ export default function Register({ navigation }: Props): React.JSX.Element {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backText}>← Back</Text>
+        <Text style={styles.backText}>{t('auth.back')}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>Create Account</Text>
+      <Text style={styles.title}>{t('auth.registerTitle')}</Text>
 
       <TextInput
         style={styles.input}
-        placeholder="Full Name"
+        placeholder={t('auth.fullNamePlaceholder')}
         value={name}
         onChangeText={setName}
       />
 
       <TextInput
         style={styles.input}
-        placeholder="Email"
+        placeholder={t('auth.emailPlaceholder')}
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
@@ -87,7 +105,7 @@ export default function Register({ navigation }: Props): React.JSX.Element {
 
       <TextInput
         style={styles.input}
-        placeholder="Phone Number (optional, e.g. +12065550100)"
+        placeholder={t('auth.phoneNumberPlaceholder')}
         value={phoneNumber}
         onChangeText={setPhoneNumber}
         keyboardType="phone-pad"
@@ -95,7 +113,7 @@ export default function Register({ navigation }: Props): React.JSX.Element {
 
       <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder={t('auth.passwordPlaceholder')}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -103,7 +121,7 @@ export default function Register({ navigation }: Props): React.JSX.Element {
 
       <TextInput
         style={styles.input}
-        placeholder="Confirm Password"
+        placeholder={t('auth.confirmPasswordPlaceholder')}
         value={confirmPassword}
         onChangeText={setConfirmPassword}
         secureTextEntry
@@ -116,12 +134,12 @@ export default function Register({ navigation }: Props): React.JSX.Element {
       >
         {loading
           ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.buttonText}>Create Account</Text>
+          : <Text style={styles.buttonText}>{t('auth.registerButton')}</Text>
         }
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.link}>Already have an account? Login</Text>
+        <Text style={styles.link}>{t('auth.hasAccount')}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -140,7 +158,7 @@ const styles = StyleSheet.create({
     left: 24,
   },
   backText: {
-    color: '#1565c0',
+    color: '#5170ff',
     fontSize: 16,
   },
   title: {
@@ -148,7 +166,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 32,
     textAlign: 'center',
-    color: '#1565c0',
+    color: '#5170ff',
   },
   input: {
     borderWidth: 1,
@@ -159,7 +177,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   button: {
-    backgroundColor: '#1565c0',
+    backgroundColor: '#5170ff',
     padding: 14,
     borderRadius: 8,
     alignItems: 'center',
@@ -172,7 +190,7 @@ const styles = StyleSheet.create({
   },
   link: {
     textAlign: 'center',
-    color: '#1565c0',
+    color: '#5170ff',
     fontSize: 14,
     marginTop: 8,
   },

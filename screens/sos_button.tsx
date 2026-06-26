@@ -4,6 +4,7 @@ import {
   Modal, View, TouchableOpacity, Animated
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 
 type SOSButtonProps = {
   onTrigger: () => Promise<void> | void;
@@ -13,6 +14,8 @@ type SOSButtonProps = {
 const COUNTDOWN_SECONDS = 5;
 
 export default function SOSButton({ onTrigger, disabled }: SOSButtonProps) {
+  const { t } = useTranslation();
+
   const [sending, setSending] = useState<boolean>(false);
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number>(COUNTDOWN_SECONDS);
@@ -93,7 +96,7 @@ export default function SOSButton({ onTrigger, disabled }: SOSButtonProps) {
         onPress={handlePress}
         disabled={disabled || sending}
         accessibilityRole="button"
-        accessibilityLabel="Send SOS emergency alert"
+        accessibilityLabel={t('sos.accessibilityLabel')}
         style={({ pressed }) => [
           styles.button,
           pressed && styles.buttonPressed,
@@ -103,7 +106,7 @@ export default function SOSButton({ onTrigger, disabled }: SOSButtonProps) {
         {sending ? (
           <ActivityIndicator color="#fff" size="large" />
         ) : (
-          <Text style={styles.buttonText}>SOS</Text>
+          <Text style={styles.buttonText}>{t('sos.button')}</Text>
         )}
       </Pressable>
 
@@ -125,14 +128,14 @@ export default function SOSButton({ onTrigger, disabled }: SOSButtonProps) {
 
             {/* Countdown instruction */}
             <Text style={styles.countdownText}>
-              Respond in{' '}
+              {t('sos.countdownPrefix')}{' '}
               <Text style={styles.countdownNumber}>{countdown}</Text>
-              {' '}second{countdown !== 1 ? 's' : ''} to confirm
+              {' '}{t('sos.countdownSuffix', { count: countdown })}
             </Text>
 
-            <Text style={styles.title}>Send SOS Alert?</Text>
+            <Text style={styles.title}>{t('sos.confirmTitle')}</Text>
             <Text style={styles.body}>
-              This will immediately notify your emergency contacts with your location.
+              {t('sos.body')}
             </Text>
 
             {/* Confirm button */}
@@ -141,7 +144,7 @@ export default function SOSButton({ onTrigger, disabled }: SOSButtonProps) {
               onPress={handleConfirm}
               activeOpacity={0.85}
             >
-              <Text style={styles.confirmText}>Send Now</Text>
+              <Text style={styles.confirmText}>{t('sos.sendNow')}</Text>
             </TouchableOpacity>
 
             {/* Cancel button */}
@@ -150,7 +153,7 @@ export default function SOSButton({ onTrigger, disabled }: SOSButtonProps) {
               onPress={handleCancel}
               activeOpacity={0.7}
             >
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{t('sos.cancel')}</Text>
             </TouchableOpacity>
 
           </View>
