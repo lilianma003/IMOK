@@ -67,7 +67,7 @@ function MainTabs() {
           }
           return <Ionicons name={iconName as any} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#1565c0',
+        tabBarActiveTintColor: '#5170ff',
         tabBarInactiveTintColor: 'gray',
       })}
     >
@@ -119,7 +119,7 @@ export default function App() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1565c0" />
+        <ActivityIndicator size="large" color="#5170ff" />
       </View>
     );
   }
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1565c0',
+    color: '#5170ff',
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   primaryButton: {
-    backgroundColor: '#1565c0',
+    backgroundColor: '#38b6ff',
     padding: 14,
     borderRadius: 8,
     width: '100%',
@@ -173,14 +173,14 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     borderWidth: 2,
-    borderColor: '#1565c0',
+    borderColor: '#5170ff',
     padding: 14,
     borderRadius: 8,
     width: '100%',
     alignItems: 'center',
   },
   secondaryButtonText: {
-    color: '#1565c0',
+    color: '#5170ff',
     fontSize: 16,
     fontWeight: '600',
   },

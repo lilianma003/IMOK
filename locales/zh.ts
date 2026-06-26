@@ -155,7 +155,7 @@ continueButton: "继续登录",
     subheader: '这些信息适用于美国境内的每个人，无论移民身份如何。',
     sections: [
       {
-        title: '🛡️ 无论移民身份如何，你的权利',
+        title: '无论移民身份如何，你的权利',
         content: [
           '你有权保持沉默。你无需回答有关你出生地、入境方式或移民身份的任何问题。',
           '你有权拒绝在未与律师交谈之前签署任何文件。',
@@ -165,7 +165,7 @@ continueButton: "继续登录",
         ]
       },
       {
-        title: '🚪 如果ICE来敲你的门',
+        title: '如果ICE来敲你的门',
         content: ['不要开门。你可以隔着门说话，并要求他们出示搜查令。',
 '询问他们是否持有法官签署的司法搜查令。移民执法的行政搜查令并不赋予他们进入你家的权利。',
 '如果他们没有司法搜查令，请冷静地说："I do not consent to your entry。"',
@@ -175,7 +175,7 @@ continueButton: "继续登录",
 
       },
       {
-        title: '🚔如果你被警察拦截',
+        title: '如果你被警察拦截',
         content: [
           '保持冷静，双手保持可见。',
           '你有权保持沉默。请清楚地说："I am exercising my right to remain silent."',

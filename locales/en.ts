@@ -157,7 +157,7 @@ continueButton: "Continue to Login",
     subheader: 'This information applies to everyone in the United States, regardless of immigration status.',
     sections: [
       {
-        title: '🛡️ Your Rights Regardless of Immigration Status',
+        title: ' Your Rights Regardless of Immigration Status',
         content: [
           'You have the right to remain silent. You do not have to answer questions about where you were born, how you entered the country, or your immigration status.',
           'You have the right to refuse to sign any documents without speaking to a lawyer first.',
@@ -167,7 +167,7 @@ continueButton: "Continue to Login",
         ],
       },
       {
-        title: '🚪 If ICE Comes to Your Door',
+        title: 'If ICE Comes to Your Door',
         content: [
           'Do not open the door. You can speak through the door and ask them to show their warrant.',
           'Ask if they have a judicial warrant signed by a judge. An ICE administrative warrant does NOT give them the right to enter your home.',
@@ -178,7 +178,7 @@ continueButton: "Continue to Login",
         ],
       },
       {
-        title: '🚔 If Stopped by Police',
+        title: ' If Stopped by Police',
         content: [
           'Stay calm and keep your hands visible.',
           'You have the right to remain silent. Say clearly: "I am exercising my right to remain silent."',
