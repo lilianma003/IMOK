@@ -38,10 +38,35 @@ export const setupNotificationCategories = async (): Promise<void> => {
 export const registerFCMToken = async (userId: string): Promise<void> => {
   try {
     const token = await Notifications.getExpoPushTokenAsync({
-      projectId: 'your-expo-project-id',  // ← make sure this is set
+      projectId: Constants.expoConfig?.extra?.eas?.projectId,
     });
-    console.log('FCM token registered:', token.data);
-    await updateDoc(doc(db, 'users', userId), { fcmToken: token.data });
+    const fcmToken = token.data;
+
+    await updateDoc(doc(db, 'users', userId), { fcmToken });
+    console.log('FCM token saved:', fcmToken);
+
+    const usersSnap = await getDocs(collection(db, 'users'));
+
+    for (const userDoc of usersSnap.docs) {
+      if (userDoc.id === userId) continue;
+
+      const contactsSnap = await getDocs(
+        query(
+          collection(db, 'users', userDoc.id, 'contacts'),
+          where('linkedUserId', '==', userId)
+        )
+      );
+
+      for (const contactDoc of contactsSnap.docs) {
+        if (contactDoc.data().fcmToken !== fcmToken) {
+          await updateDoc(
+            doc(db, 'users', userDoc.id, 'contacts', contactDoc.id),
+            { fcmToken }
+          );
+          console.log(`Updated fcmToken in ${userDoc.id}'s contacts`);
+        }
+      }
+    }
   } catch (error) {
     console.log('Token registration error:', error);
   }

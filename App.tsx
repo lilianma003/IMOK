@@ -98,19 +98,12 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
       if (firebaseUser) {
         await registerFCMToken(firebaseUser.uid);
+        await new Promise(resolve => setTimeout(resolve, 1000));
         await refreshContactStatuses(firebaseUser.uid);
       }
     });
