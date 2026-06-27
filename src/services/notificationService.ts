@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { doc, updateDoc, getDocs, collection, where, query } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
 
@@ -37,13 +38,28 @@ export const setupNotificationCategories = async (): Promise<void> => {
 
 export const registerFCMToken = async (userId: string): Promise<void> => {
   try {
-    const token = await Notifications.getExpoPushTokenAsync({
-      projectId: Constants.expoConfig?.extra?.eas?.projectId,
-    });
+    console.log('[registerFCMToken] start, userId:', userId);
+
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    console.log('[registerFCMToken] projectId:', projectId);
+    if (!projectId) {
+      console.warn('[registerFCMToken] missing projectId — check app.json extra.eas.projectId; aborting token registration');
+      return;
+    }
+
+    const permission = await requestNotificationPermissions();
+    console.log('[registerFCMToken] notification permission granted:', permission);
+    if (!permission) {
+      console.warn('[registerFCMToken] notification permission not granted; cannot obtain push token');
+      return;
+    }
+
+    const token = await Notifications.getExpoPushTokenAsync({ projectId });
     const fcmToken = token.data;
+    console.log('[registerFCMToken] got Expo push token:', fcmToken);
 
     await updateDoc(doc(db, 'users', userId), { fcmToken });
-    console.log('FCM token saved:', fcmToken);
+    console.log('[registerFCMToken] FCM token saved to users/' + userId);
 
     const usersSnap = await getDocs(collection(db, 'users'));
 
@@ -63,12 +79,14 @@ export const registerFCMToken = async (userId: string): Promise<void> => {
             doc(db, 'users', userDoc.id, 'contacts', contactDoc.id),
             { fcmToken }
           );
-          console.log(`Updated fcmToken in ${userDoc.id}'s contacts`);
+          console.log(`[registerFCMToken] updated fcmToken in ${userDoc.id}'s contacts`);
         }
       }
     }
+
+    console.log('[registerFCMToken] done');
   } catch (error) {
-    console.log('Token registration error:', error);
+    console.error('[registerFCMToken] token registration error:', error);
   }
 };
 
@@ -149,6 +167,12 @@ export const sendEmergencyPush = async (
   senderName: string,
   locationUrl: string | null
 ): Promise<void> => {
+  console.log('[sendEmergencyPush] sending to', fcmTokens.length, 'token(s):', fcmTokens);
+  if (fcmTokens.length === 0) {
+    console.warn('[sendEmergencyPush] no tokens to send to — aborting');
+    return;
+  }
+
   const messages = fcmTokens.map(token => ({
     to: token,
     sound: 'default',
@@ -163,15 +187,19 @@ export const sendEmergencyPush = async (
     channelId: 'emergency_alerts',
   }));
 
-  const response = await fetch('https://exp.host/--/api/v2/push/send', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify(messages),
-  });
+  try {
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(messages),
+    });
 
-  const result = await response.json();
-  console.log('Push result:', result);
+    const result = await response.json();
+    console.log('[sendEmergencyPush] Expo push response:', JSON.stringify(result));
+  } catch (error) {
+    console.error('[sendEmergencyPush] failed to send push:', error);
+  }
 };
