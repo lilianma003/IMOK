@@ -5,16 +5,18 @@ import {
   View, Text, TouchableOpacity,
   StyleSheet, ActivityIndicator
 } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from './src/config/firebaseConfig';
+import * as Notifications from 'expo-notifications';
 import CheckinTimer from './screens/checkin_timer';
 import MyContacts from './screens/my_contacts';
 import Resources from './screens/resources';
 import UserProfile from './screens/user_profile';
+import Alerts from './screens/alerts';
 import Login from './screens/login';
 import Register from './screens/register';
 import { registerFCMToken } from './src/services/notificationService';
@@ -24,6 +26,7 @@ import { refreshContactStatuses } from './src/services/contactService';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+const navigationRef = createNavigationContainerRef();
 
 function WelcomeScreen({ navigation }: any) {
   return (
@@ -63,6 +66,8 @@ function MainTabs() {
             iconName = focused ? 'people' : 'people-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
+          } else if (route.name === 'Alerts') {
+            iconName = focused ? 'notifications' : 'notifications-outline';
           } else if (route.name === 'Resources') {
             iconName = focused ? 'book' : 'book-outline';
           }
@@ -74,6 +79,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Home" component={CheckinTimer} options={{ tabBarLabel: t('tabs.home') }} />
       <Tab.Screen name="Contacts" component={MyContacts} options={{ tabBarLabel: t('tabs.contacts') }} />
+      <Tab.Screen name="Alerts" component={Alerts} options={{ tabBarLabel: t('tabs.alerts') }} />
       <Tab.Screen name="Profile" component={UserProfile} options={{ tabBarLabel: t('tabs.profile') }} />
       <Tab.Screen name="Resources" component={Resources} options={{ tabBarLabel: t('tabs.resources') }} />
     </Tab.Navigator>
@@ -107,7 +113,21 @@ export default function App() {
         await refreshContactStatuses(firebaseUser.uid);
       }
     });
-    return unsubscribe;
+
+    const notificationSub = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      if (data?.screen && navigationRef.isReady()) {
+        // Use setTimeout to ensure navigation is ready if app is just opening
+        setTimeout(() => {
+          navigationRef.navigate(data.screen as any);
+        }, 500);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      notificationSub.remove();
+    };
   }, []);
 
   if (loading) {
@@ -119,7 +139,7 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {user ? <MainTabs /> : <AuthStack />}
     </NavigationContainer>
   );

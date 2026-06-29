@@ -5,7 +5,8 @@ export default {
     home: "Home",
     contacts: "Contacts",
     profile: "Profile",
-    resources: "Resources"
+    resources: "Resources",
+    alerts: "Alerts"
   },
   contacts: {
     title: "Emergency Contacts",
@@ -199,5 +200,13 @@ continueButton: "Continue to Login",
     call: 'Call',
     text: 'Text',
     delete: 'Delete',
+  },
+  alerts: {
+    title: 'Alert History',
+    me: 'Me',
+    emergencyMessage: 'Emergency alert triggered!',
+    graceExpiredMessage: 'Check-in expired. Alert sent.',
+    locationShared: 'Location shared',
+    empty: 'No alerts found.',
   },
 };

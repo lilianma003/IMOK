@@ -21,7 +21,6 @@ interface EmergencyProfile {
   languages: string;
   medicalInfo: string;
   attorneyContact: string;
-  iceCaseNumber: string;
 }
 
 export default function UserProfile() {
@@ -33,7 +32,6 @@ export default function UserProfile() {
     languages: '',
     medicalInfo: '',
     attorneyContact: '',
-    iceCaseNumber: '',
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -127,16 +125,6 @@ return (
           value={profile.attorneyContact}
           onChangeText={v => handleChange('attorneyContact', v)}
           placeholder={t('profile.attorneyContactPlaceholder')}
-          placeholderTextColor="#aaa"
-        />
-      </Field>
-
-      <Field label={t('profile.iceCaseNumber')}>
-        <TextInput
-          style={styles.input}
-          value={profile.iceCaseNumber}
-          onChangeText={v => handleChange('iceCaseNumber', v)}
-          placeholder={t('profile.iceCaseNumberPlaceholder')}
           placeholderTextColor="#aaa"
         />
       </Field>

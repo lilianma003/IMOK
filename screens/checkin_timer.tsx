@@ -342,6 +342,10 @@ export default function CheckinTimer(): React.JSX.Element {
       .filter(c => c.status === 'linked' && c.fcmToken)
       .map(c => c.fcmToken as string);
 
+    const recipientUids = contacts
+      .filter(c => c.status === 'linked' && c.linkedUserId)
+      .map(c => c.linkedUserId as string);
+
     if (tokens.length === 0) {
       Alert.alert(t('checkin.noLinkedContactsTitle'), t('checkin.noLinkedContactsMessage'));
       return;
@@ -349,8 +353,10 @@ export default function CheckinTimer(): React.JSX.Element {
 
     await sendEmergencyPush(
       tokens,
+      recipientUids,
       userDoc?.name ?? t('checkin.someoneDefaultName'),
-      location?.mapsUrl ?? null
+      location?.mapsUrl ?? null,
+      userDoc?.emergencyProfile
     );
 
     const triggered: CheckinState = { ...state, status: 'triggered' };

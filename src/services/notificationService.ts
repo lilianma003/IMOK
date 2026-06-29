@@ -1,7 +1,8 @@
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { doc, updateDoc, getDocs, collection, where, query } from 'firebase/firestore';
-import { db } from '../config/firebaseConfig';
+import { doc, updateDoc, getDocs, collection, where, query, addDoc, Timestamp } from 'firebase/firestore';
+import { db, auth } from '../config/firebaseConfig';
+import { EmergencyProfile } from './userService';
 
 export const setupNotificationHandler = (): void => {
   Notifications.setNotificationHandler({
@@ -164,24 +165,51 @@ export const cancelAllCheckinNotifications = async (): Promise<void> => {
 
 export const sendEmergencyPush = async (
   fcmTokens: string[],
+  recipientUids: string[],
   senderName: string,
-  locationUrl: string | null
+  locationUrl: string | null,
+  emergencyProfile?: EmergencyProfile
 ): Promise<void> => {
   console.log('[sendEmergencyPush] sending to', fcmTokens.length, 'token(s):', fcmTokens);
+
+  // Log alert to Firestore for history
+  const userId = auth.currentUser?.uid;
+  if (userId) {
+    try {
+      await addDoc(collection(db, 'alerts'), {
+        senderId: userId,
+        senderName,
+        involvedUserIds: [userId, ...recipientUids],
+        timestamp: Timestamp.now(),
+        type: 'emergency_alert',
+        locationUrl: locationUrl ?? '',
+        emergencyProfile: emergencyProfile ?? null,
+      });
+    } catch (e) {
+      console.error('[sendEmergencyPush] failed to log alert:', e);
+    }
+  }
+
   if (fcmTokens.length === 0) {
     console.warn('[sendEmergencyPush] no tokens to send to — aborting');
     return;
   }
 
+  const profileSummary = emergencyProfile
+    ? `\nProfile: ${emergencyProfile.name}, ${emergencyProfile.nationality}, Lang: ${emergencyProfile.languages}`
+    : '';
+
   const messages = fcmTokens.map(token => ({
     to: token,
     sound: 'default',
     title: 'Emergency alert',
-    body: `${senderName} may need help!${locationUrl ? ' Tap to see location.' : ''}`,
+    body: `${senderName} may need help!${locationUrl ? ' Tap to see location.' : ''}${profileSummary}`,
     data: {
       type: 'emergency_alert',
       senderName,
       locationUrl: locationUrl ?? '',
+      screen: 'Alerts',
+      emergencyProfile: emergencyProfile ?? null,
     },
     priority: 'high',
     channelId: 'emergency_alerts',

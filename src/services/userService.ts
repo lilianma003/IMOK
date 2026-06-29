@@ -1,11 +1,21 @@
 import { db } from '../config/firebaseConfig';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 
+export interface EmergencyProfile {
+  name: string;
+  nationality: string;
+  languages: string;
+  medicalInfo: string;
+  attorneyContact: string;
+  iceCaseNumber: string;
+}
+
 interface UserData {
   name: string;
   email: string;
   phoneNumber: string;
   createdAt: Date;
+  emergencyProfile?: EmergencyProfile;
 }
 
 export const createUserDocument = async (
