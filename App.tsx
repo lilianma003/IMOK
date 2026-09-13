@@ -24,9 +24,16 @@ import RegisterSuccess from './screens/register_success';
 import { useTranslation } from 'react-i18next';
 import { refreshContactStatuses } from './src/services/contactService';
 
+export type RootTabParamList = {
+  CheckinTimer: undefined;
+  MyContacts: undefined;
+  UserProfile: undefined;
+  Resources: undefined;
+};
+
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
-const navigationRef = createNavigationContainerRef();
+export const navigationRef = createNavigationContainerRef<RootTabParamList>();
 
 function WelcomeScreen({ navigation }: any) {
   return (
