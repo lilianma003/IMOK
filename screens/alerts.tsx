@@ -84,9 +84,6 @@ export default function AlertsScreen(): React.JSX.Element {
               <Text style={styles.profileText}>Languages: {item.emergencyProfile.languages}</Text>
               <Text style={styles.profileText}>Medical: {item.emergencyProfile.medicalInfo}</Text>
               <Text style={styles.profileText}>Attorney: {item.emergencyProfile.attorneyContact}</Text>
-              {item.emergencyProfile.iceCaseNumber ? (
-                <Text style={styles.profileText}>ICE #: {item.emergencyProfile.iceCaseNumber}</Text>
-              ) : null}
             </View>
           )}
           {item.locationUrl ? (
