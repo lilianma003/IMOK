@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -159,22 +159,38 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LANGUAGE_KEY = 'user_language';
 
+const LANGUAGES: { code: 'en' | 'zh' | 'es'; label: string }[] = [
+  { code: 'en', label: 'EN' },
+  { code: 'zh', label: '中文' },
+  { code: 'es', label: 'ES' },
+];
+
 function LanguageToggle() {
   const { i18n } = useTranslation();
-  const isZh = i18n.language === 'zh';
 
-  const toggleLanguage = async () => {
-    const newLang = isZh ? 'en' : 'zh';
-    i18n.changeLanguage(newLang);
-    await AsyncStorage.setItem(LANGUAGE_KEY, newLang);
+  const selectLanguage = async (code: 'en' | 'zh' | 'es') => {
+    i18n.changeLanguage(code);
+    await AsyncStorage.setItem(LANGUAGE_KEY, code);
   };
 
   return (
-    <TouchableOpacity onPress={toggleLanguage} style={toggleStyles.toggle}>
-      <Text style={[toggleStyles.option, !isZh && toggleStyles.active]}>EN</Text>
-      <Text style={toggleStyles.divider}>|</Text>
-      <Text style={[toggleStyles.option, isZh && toggleStyles.active]}>中文</Text>
-    </TouchableOpacity>
+    <View style={toggleStyles.toggle}>
+      {LANGUAGES.map(({ code, label }, index) => (
+        <React.Fragment key={code}>
+          {index > 0 && <Text style={toggleStyles.divider}>|</Text>}
+          <TouchableOpacity onPress={() => selectLanguage(code)}>
+            <Text
+              style={[
+                toggleStyles.option,
+                i18n.language === code && toggleStyles.active,
+              ]}
+            >
+              {label}
+            </Text>
+          </TouchableOpacity>
+        </React.Fragment>
+      ))}
+    </View>
   );
 }
 

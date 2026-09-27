@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import en from './locales/en';
 import zh from './locales/zh';
+import es from './locales/es';
 
 const LANGUAGE_KEY = 'user_language';
 
@@ -16,6 +17,7 @@ const initI18n = async () => {
     resources: {
       en: { translation: en },
       zh: { translation: zh },
+      es: { translation: es },
     },
   });
 };
