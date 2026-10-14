@@ -41,3 +41,8 @@ yarn-error.*
 /android
 
 imok-tentative-firebase-adminsdk-fbsvc-8dda65db05.json
+
+.env
+*.env.local
+google-services.json
+GoogleService-Info.plist

@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 {
   "expo": {
     "name": "IMOK",
@@ -72,7 +74,15 @@
     "extra": {
       "eas": {
         "projectId": "4e26b615-a632-4a12-8755-4d09e40fafd0"
-      }
+      },
+      "cloudinaryCloudName": "qewtdlmk",
+      "cloudinaryUploadPreset": "unsigned_upload",
+      "firebaseApiKey": "AIzaSyDiwcwDdezMSAHhT-Bj3zIl0iue4ltDGT8",
+      "firebaseAuthDomain": "imok-tentative.firebaseapp.com",
+      "firebaseProjectId": "imok-tentative",
+      "firebaseStorageBucket": "imok-tentative.firebasestorage.app",
+      "firebaseMessagingSenderId": "384147725074",
+      "firebaseAppId": "1:384147725074:web:cbf319f4cae02f38f5f1cb"
     },
     "owner": "lilianma003",
     "runtimeVersion": {
@@ -83,3 +93,19 @@
     }
   }
 }
+
+export default {
+  expo: {
+    extra: {
+      firebaseApiKey: process.env.FIREBASE_API_KEY,
+      firebaseAuthDomain: process.env.FIREBASE_AUTH_DOMAIN,
+      firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
+      firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+      firebaseMessagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+      firebaseAppId: process.env.FIREBASE_APP_ID,
+      cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      cloudinaryUploadPreset: process.env.CLOUDINARY_UPLOAD_PRESET,
+      easProjectId: process.env.EAS_PROJECT_ID,
+    }
+  }
+};

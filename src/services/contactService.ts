@@ -24,6 +24,13 @@ export const addContact = async (
   contact: { name: string; phone: string; email: string }
 ): Promise<string> => {
   // Look up contact by email in Firestore
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(contact.email)) {
+    throw new Error('Invalid email address');
+  }
+  if (!contact.name.trim()) {
+    throw new Error('Name is required');
+  }
   const q = query(
     collection(db, 'users'),
     where('email', '==', contact.email.toLowerCase())
