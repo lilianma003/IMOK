@@ -115,9 +115,13 @@ export default function App() {
       setUser(firebaseUser);
       setLoading(false);
       if (firebaseUser) {
-        await registerFCMToken(firebaseUser.uid);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        await refreshContactStatuses(firebaseUser.uid);
+        try {
+          await registerFCMToken(firebaseUser.uid);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          await refreshContactStatuses(firebaseUser.uid);
+        } catch (e) {
+          console.warn('Post-login setup failed', e);
+        }
       }
     });
 

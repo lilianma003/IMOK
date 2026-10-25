@@ -58,6 +58,12 @@ const config: ExpoConfig = {
         isIosBackgroundLocationEnabled: true,
       },
     ],
+    [
+      'expo-image-picker',
+      {
+        photosPermission: 'IMOK needs access to your photos so you can upload an image.',
+      },
+    ]
   ],
   web: {
     favicon: './assets/favicon.png',
@@ -77,7 +83,7 @@ const config: ExpoConfig = {
   },
   owner: 'lilianma003',
   runtimeVersion: {
-    policy: 'appVersion',
+    policy: 'fingerprint', 
   },
   updates: {
     url: 'https://u.expo.dev/4e26b615-a632-4a12-8755-4d09e40fafd0',
