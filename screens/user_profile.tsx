@@ -93,7 +93,7 @@ export default function UserProfile(): React.JSX.Element {
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your photo library.');
+      Alert.alert(t('profile.permissionTitle'), t('profile.permissionLibrary'));
       return;
     }
 
@@ -112,7 +112,7 @@ export default function UserProfile(): React.JSX.Element {
       const url = await uploadProfilePicture(user.uid, uri);
       setProfilePicture(url);
     } catch (error) {
-      Alert.alert('Upload failed', 'Could not upload photo. Please try again.');
+      Alert.alert(t('profile.uploadFailedTitle'), t('profile.uploadFailedMessage'));
       console.log('Photo upload error:', error);
     } finally {
       setUploadingPhoto(false);
@@ -125,7 +125,7 @@ export default function UserProfile(): React.JSX.Element {
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow camera access.');
+      Alert.alert(t('profile.permissionTitle'), t('profile.permissionCamera'));
       return;
     }
 
@@ -143,7 +143,7 @@ export default function UserProfile(): React.JSX.Element {
       const url = await uploadProfilePicture(user.uid, uri);
       setProfilePicture(url);
     } catch (error) {
-      Alert.alert('Upload failed', 'Could not upload photo. Please try again.');
+      Alert.alert(t('profile.uploadFailedTitle'), t('profile.uploadFailedMessage'));
     } finally {
       setUploadingPhoto(false);
     }
@@ -151,12 +151,12 @@ export default function UserProfile(): React.JSX.Element {
 
   const handlePhotoPress = (): void => {
     Alert.alert(
-      'Profile Picture',
-      'Choose an option',
+      t('profile.photoTitle'),
+      t('profile.photoChoose'),
       [
-        { text: 'Take Photo', onPress: handleTakePhoto },
-        { text: 'Choose from Library', onPress: handlePickPhoto },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('profile.takePhoto'), onPress: handleTakePhoto },
+        { text: t('profile.chooseLibrary'), onPress: handlePickPhoto },
+        { text: t('profile.cancel'), style: 'cancel' },
       ]
     );
   };

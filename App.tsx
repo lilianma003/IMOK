@@ -36,23 +36,25 @@ const Stack = createNativeStackNavigator();
 export const navigationRef = createNavigationContainerRef<RootTabParamList>();
 
 function WelcomeScreen({ navigation }: any) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.welcomeContainer}>
-      <Text style={styles.welcomeTitle}>Welcome to imOK</Text>
-      <Text style={styles.welcomeSubtitle}>Stay safe by connecting with the people you trust.</Text>
+      <Text style={styles.welcomeTitle}>{t('welcome.title')}</Text>
+      <Text style={styles.welcomeSubtitle}>{t('welcome.subtitle')}</Text>
 
       <TouchableOpacity
         style={styles.primaryButton}
         onPress={() => navigation.navigate('Login')}
       >
-        <Text style={styles.primaryButtonText}>Login</Text>
+        <Text style={styles.primaryButtonText}>{t('welcome.login')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.secondaryButton}
         onPress={() => navigation.navigate('Register')}
       >
-        <Text style={styles.secondaryButtonText}>Create Account</Text>
+        <Text style={styles.secondaryButtonText}>{t('welcome.createAccount')}</Text>
       </TouchableOpacity>
     </View>
   );

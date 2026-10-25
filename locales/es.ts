@@ -1,9 +1,5 @@
-  
-  
-  export default {
-    tabs: {
-        home: "Inicio",
-  navigation: {
+export default {
+  tabs: {
     home: "Inicio",
     contacts: "Contactos",
     profile: "Perfil",
@@ -58,6 +54,22 @@ notLoggedInTitle: "No has iniciado sesión",
 notLoggedInMessage: "Por favor inicia sesión para guardar tu perfil.",
 errorTitle: "Error",
 errorMessage: "No se pudo guardar el perfil. Por favor intenta de nuevo.",
+    photoTitle: "Foto de perfil",
+    photoChoose: "Elige una opción",
+    takePhoto: "Tomar foto",
+    chooseLibrary: "Elegir de la galería",
+    cancel: "Cancelar",
+    permissionTitle: "Permiso necesario",
+    permissionLibrary: "Por favor permite el acceso a tu galería de fotos.",
+    permissionCamera: "Por favor permite el acceso a la cámara.",
+    uploadFailedTitle: "Error al subir",
+    uploadFailedMessage: "No se pudo subir la foto. Por favor intenta de nuevo.",
+  },
+  welcome: {
+    title: "Bienvenido a imOK",
+    subtitle: "Mantente seguro conectándote con las personas en quienes confías.",
+    login: "Iniciar sesión",
+    createAccount: "Crear cuenta",
   },
   auth: {
     back: "← Atrás",
@@ -211,5 +223,4 @@ continueButton: "Continuar a Iniciar Sesión",
     locationShared: 'Ubicación compartida',
     empty: 'No se encontraron alertas.',
   },
-},
-  }
+};
