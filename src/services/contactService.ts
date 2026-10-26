@@ -1,7 +1,7 @@
 import { db } from '../config/firebaseConfig';
 import {
   collection, addDoc, getDocs,
-  deleteDoc, doc, query, where, updateDoc
+  deleteDoc, doc, query, where, updateDoc, limit
 } from 'firebase/firestore';
 
 export interface Contact {
@@ -31,21 +31,28 @@ export const addContact = async (
   if (!contact.name.trim()) {
     throw new Error('Name is required');
   }
-  const q = query(
-    collection(db, 'users'),
-    where('email', '==', contact.email.toLowerCase())
-  );
-  const snap = await getDocs(q);
-
   let linkedUserId: string | null = null;
   let fcmToken: string | null = null;
   let status: 'linked' | 'not_found' = 'not_found';
 
-  if (!snap.empty) {
-    const contactUser = snap.docs[0];
-    linkedUserId = contactUser.id;
-    fcmToken = contactUser.data().fcmToken ?? null;
-    status = 'linked';
+  // Linking is best-effort: if the lookup is blocked, still save the contact
+  // unlinked; refreshContactStatuses can link it later.
+  try {
+    const q = query(
+      collection(db, 'users'),
+      where('email', '==', contact.email.toLowerCase()),
+      limit(1)
+    );
+    const snap = await getDocs(q);
+
+    if (!snap.empty) {
+      const contactUser = snap.docs[0];
+      linkedUserId = contactUser.id;
+      fcmToken = contactUser.data().fcmToken ?? null;
+      status = 'linked';
+    }
+  } catch (error) {
+    console.warn('Contact lookup by email failed; saving unlinked:', error);
   }
 
   const ref = await addDoc(collection(db, 'users', userId, 'contacts'), {
@@ -73,7 +80,8 @@ export const refreshContactStatuses = async (userId: string): Promise<void> => {
   for (const contact of contacts) {
     const q = query(
       collection(db, 'users'),
-      where('email', '==', contact.email.toLowerCase())
+      where('email', '==', contact.email.toLowerCase()),
+      limit(1)
     );
     const snap = await getDocs(q);
 

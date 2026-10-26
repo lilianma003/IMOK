@@ -23,6 +23,7 @@ export default function MyContacts(): React.JSX.Element {
   const [email, setEmail] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
+  const [addError, setAddError] = useState<string>('');
   const [sheetOpen, setSheetOpen] = useState<boolean>(false);
 
   const sheetAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
@@ -99,8 +100,15 @@ export default function MyContacts(): React.JSX.Element {
   };
 
   const handleAddContact = async (): Promise<void> => {
-    if (!name.trim() || !phone.trim() || !email.trim()) return;
-    if (!userId) return;
+    setAddError('');
+    if (!name.trim() || !phone.trim() || !email.trim()) {
+      setAddError(t('contacts.fillAllFields'));
+      return;
+    }
+    if (!userId) {
+      setAddError(t('profile.notLoggedInMessage'));
+      return;
+    }
     try {
       setSaving(true);
       await addContactToFirebase(userId, {
@@ -113,8 +121,16 @@ export default function MyContacts(): React.JSX.Element {
       setName('');
       setPhone('');
       setEmail('');
-    } catch {
-      Alert.alert(t('contacts.errorAddTitle'), t('contacts.errorAddMessage'));
+    } catch (error) {
+      console.error('Add contact failed:', error);
+      const code = (error as any)?.code as string | undefined;
+      if ((error as Error)?.message === 'Invalid email address') {
+        setAddError(t('contacts.errorInvalidEmail'));
+      } else if (code === 'permission-denied') {
+        setAddError(t('contacts.errorPermission'));
+      } else {
+        setAddError(`${t('contacts.errorAddMessage')}${code ? ` (${code})` : ''}`);
+      }
     } finally {
       setSaving(false);
     }
@@ -151,6 +167,7 @@ export default function MyContacts(): React.JSX.Element {
             <TextInput style={styles.input} placeholder={t('contacts.namePlaceholder')} value={name} onChangeText={setName} />
             <TextInput style={styles.input} placeholder={t('contacts.phonePlaceholder')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             <TextInput style={styles.input} placeholder={t('contacts.emailPlaceholder')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+            {addError ? <Text style={styles.addError}>{addError}</Text> : null}
             <TouchableOpacity style={styles.addButton} onPress={handleAddContact} disabled={saving}>
               {saving
                 ? <ActivityIndicator color="#fff" />
@@ -268,6 +285,11 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 10,
     fontSize: 16,
+  },
+  addError: {
+    color: '#d32f2f',
+    fontSize: 14,
+    marginBottom: 10,
   },
   addButton: {
     backgroundColor: '#5170ff',

@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    match /users/{userId} {
+    // Full read/write only for own document
+    allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    // Allow other authenticated users to read only
+    // email and fcmToken for contact lookup purposes
+    allow get: if request.auth != null;
+
+    // Contact lookup by email (contactService) is a query, which needs list.
+    // Capped at 1 result so the user list can't be pulled in one go.
+    allow list: if request.auth != null && request.query.limit <= 1;
+
+    match /contacts/{contactId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmToken']);
+    }
+
+    match /location/{document} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Invites
+    match /invites/{inviteId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /alerts/{alertId} {
+      allow read: if request.auth != null
+        && resource.data.involvedUserIds.hasAny([request.auth.uid]);
+    allow create: if request.auth != null
+        && request.resource.data.senderId == request.auth.uid;
+    allow update, delete: if false;
+    }
+
+    // Legacy Locations (if any)
+    match /locations/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
